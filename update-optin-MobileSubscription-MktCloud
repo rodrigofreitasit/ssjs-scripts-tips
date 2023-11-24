@@ -1,0 +1,73 @@
+<script runat="server">
+Platform.Load("core", "1");
+var api = new Script.Util.WSProxy();
+
+function returnData() {
+    try {
+        var customerKey = "auto_optout_mobile_list_processamento";
+        var result = api.retrieve(
+            "DataExtensionObject[" + customerKey + "]",
+            [
+                "Telefone",
+                "status_processamento"
+            ]
+        );
+        return result.Results;
+
+    } catch (error) {
+        Write(Stringify(error));
+    }
+}
+
+function updateFoneStatus(telefone) {
+      try {
+        var config = {
+            dataextension: "_MobileSubscription",
+            filter: {
+                Names: [
+                    "_MobileNumber"
+                ],
+                Values: [
+                    telefone
+                ]
+            },
+            attributes: {
+                Names: [
+                    "_OptInStatusID",
+                    "_OptOutStatusID"
+                ],
+                Values: [
+                    "0",
+                    "1"
+                ]
+            }
+        }
+
+        var resultFone = Platform.Function.UpdateData(
+            config.dataextension,
+            config.filter.Names,
+            config.filter.Values,
+            config.attributes.Names,
+            config.attributes.Values
+        );
+        return resultFone
+    } catch (error) {
+        Write(Stringify(error));
+    }
+}
+
+
+function updateStatusProcessamento(telefone){
+    var DE = DataExtension.Init("auto_optout_mobile_list_processamento"); // Inicio a Data Extension
+  DE.Rows.Update({"status_processamento":"completo"},["Telefone"], [telefone]); 
+}
+
+var data = returnData();
+for (var i = 0; i < data.length; i++) {
+    var telefone = data[i].Properties[0].Value;
+    var updatedFone = updateFoneStatus(telefone);
+    if(updatedFone > 0){
+        updateStatusProcessamento(telefone)
+    }
+}
+</script>
