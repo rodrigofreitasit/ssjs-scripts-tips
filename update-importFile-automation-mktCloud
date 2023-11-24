@@ -1,0 +1,90 @@
+<script runat = "server" >
+Platform.Load("core", "1.1.1");
+var prox = new Script.Util.WSProxy();
+
+function getImportProperties(activityName) {
+    var cols = [
+       "FileSpec",
+       "Name",
+       "CustomerKey"
+    ];
+    var filter = {
+       Property: "Name",
+       SimpleOperator: "equals",
+       Value: activityName // replace 123456789 with externalkey of the ImportDef
+    };
+ 
+    var result = prox.retrieve("ImportDefinition", cols, filter);
+    var FileNamingPattern = result.Results[0].FileSpec
+    var Name = result.Results[0].Name
+    var CustomerKey = result.Results[0].CustomerKey
+    
+    return importProperties = {
+        "Name": Name,
+        "CustomerKey": CustomerKey,
+        "FileNamingPattern": FileNamingPattern
+
+    }
+}
+
+function tratarData(FileNamingPattern) {
+    var res = FileNamingPattern.replace(dtAtual, dtAlteracao);
+    return res
+}
+
+
+function armazenaResultado(CustomerKey, Name, FileSpec,status){
+    var carregaDE = DataExtension.Init("retornoLogAlteracaoDataImpActivity"); // Inicio a Data Extension
+    carregaDE.Rows.Add({
+        CustomerKey:CustomerKey,
+        Name:Name,
+        FileSpec:FileSpec,
+        text:status}); // Armazeno adicionando uma nova linha
+}
+
+function updateFileSpec(importProperties, dtAtual, dtAlteracao) {
+    var CustomerKey = importProperties.CustomerKey;
+    var Name = importProperties.Name;
+    var FileNamingPattern = tratarData(importProperties.FileNamingPattern, dtAtual, dtAlteracao); //    AudienciaIS_SegmentExport_%%year%%-%%month%%-%%day%%.csv
+    var updateObject = {
+        CustomerKey: CustomerKey, //"78D3XXXX-XXXX-4E62-AC4E-C95XXXX5D45F",
+        FileSpec: FileNamingPattern //"AudienciaIS_SegmentExport_XXXXX_2023-10-21.csv"
+    };
+    var result = prox.updateItem("ImportDefinition", updateObject);
+    var status = result.Status;
+    var FileSpec = result.Results[0].Object.FileSpec
+    if (status == "OK") {
+        armazenaResultado(CustomerKey, Name, FileSpec)
+    }else{
+        armazenaResultado(CustomerKey, Name, FileSpec,status)
+    }
+    return status
+}
+
+
+function carregaDE(nomeDE){
+    var carregaDataExtension = DataExtension.Init(nomeDE);
+    var dadosDataExtension = carregaDataExtension.Rows.Retrieve();
+    var tamanhoDataExtension = dadosDataExtension.length;
+    var raw = { dados: dadosDataExtension, tamanho: tamanhoDataExtension}
+
+    return raw
+
+}
+function loopingAlteracao(raw, dtAtual, dtAlteracao){
+    for(var i = 0; i < raw.tamanho; i++){  
+        var activityName = raw.dados[i].ActivityName;
+        var importProperties = getImportProperties(activityName);
+        updateFileSpec(importProperties, dtAtual, dtAlteracao);
+    }
+}
+
+function execAlteracao(deName, dtAtual, dtAlteracao){
+    var raw = carregaDE(deName);    
+    loopingAlteracao(raw, dtAtual, dtAlteracao);
+}
+
+
+execAlteracao('listaImportFile_alteracaoData', '2023-11-06','%%Year%%-%%Month%%-%%Day%%');
+
+</script>
