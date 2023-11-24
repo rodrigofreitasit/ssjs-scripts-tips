@@ -1,0 +1,58 @@
+<script runat = "server">
+Platform.Load('core', '1.1.1');
+var prox = new Script.Util.WSProxy();
+
+function updateEmailStatus(SubscriberKey, Email) {
+    var sub = {
+        SubscriberKey: SubscriberKey,
+        EmailAddress: Email,
+        Status: "Held"
+
+    };
+
+    var options = {
+        SaveOptions: [{
+            PropertyName: "*",
+            SaveAction: "UpdateAdd"
+        }]
+    };
+
+    var resp = prox.createItem("Subscriber", sub, options);
+    return resp.Status
+}
+
+
+function returnData() {
+    try {
+        var customerKey = "Checage_Diaria_Limpeza_Helds";
+        var filter = {
+            Property: "Processed",
+            SimpleOperator: "equals",
+            Value: "False"
+        };
+        var result = prox.retrieve("DataExtensionObject[" + customerKey + "]", ["SubscriberKey", "EmailHeld"], filter);
+        return result.Results;
+
+    } catch (error) {
+        Write(Stringify(error));
+    }
+}
+
+function updateStatusProcessamento(Email) {
+    var DE = DataExtension.Init("Checage_Diaria_Limpeza_Helds");
+    DE.Rows.Update({
+        "Processed": "True"
+    }, ["EmailHeld"], [Email]);
+}
+
+var data = returnData();
+for (var i = 0; i < data.length; i++) {
+    var SubscriberKey = data[i].Properties[0].Value;
+    var Email = data[i].Properties[1].Value;
+    var updatedEmail = updateEmailStatus(SubscriberKey, Email);
+    if (updatedEmail == "OK") {
+        updateStatusProcessamento(Email)
+    }
+}
+
+</script>
