@@ -1,0 +1,119 @@
+<script runat = "server">
+
+Platform.Load("Core", "1.1.2");
+var api = new Script.Util.WSProxy();
+var current_BU = "XXXXXXX";
+var authURL = 'https://XXXXXXXXXXXXXXXXXXXXXX.auth.marketingcloudapis.com'
+var tokenMktCloud = tokenMktCloud();
+
+function tokenMktCloud() {
+    try {
+        var urlToken = authURL + '/v2/token';
+        var ContentType = 'application/json';
+        var payload = {
+            client_id: "XXXXXXXXXXXXXXXXXXXX",
+            client_secret: "XXXXXXXXXXXXXXXXXXXXXX",
+            grant_type: 'client_credentials'
+        };
+        var Result = HTTP.Post(urlToken, ContentType, Stringify(payload));
+        var tokenResponse = Platform.Function.ParseJSON(Result.Response[0]);
+        var accessToken = tokenResponse.access_token;
+        var rest_instance_url = tokenResponse.rest_instance_url;
+        return {
+            "accessToken": accessToken,
+            "rest_instance_url": rest_instance_url
+        }
+    } catch (e) {
+        geraLog(current_BU, "validateEmail Error API Token", Stringify(e).replace(/(?:\\[rn]|[\r\n]+)+/g, ""));
+    }
+}
+
+function geraLog(email, valid, failedValidation, Result) {
+    var logErrorDE = DataExtension.Init("retorno_list_detective");
+    logErrorDE.Rows.Add({
+        email: email,
+        valid: valid,
+        failedValidation: failedValidation
+    });
+}
+
+function validateEmail(payload, tokenMktCloud) {
+    try {
+        var Url = tokenMktCloud.rest_instance_url + '/address/v1/validateEmail';
+        var ContentType = 'application/json';
+        var Payload = Stringify(payload);
+        var HeaderNames = ["Authorization"];
+        var s1 = "Bearer ";
+        var access_Token = tokenMktCloud.accessToken;
+        var HeaderValues = [s1.concat(access_Token)]; // Token caso precise
+        var Result = HTTP.Post(Url, ContentType, Payload, HeaderNames, HeaderValues); //Chamada API
+        var response = Platform.Function.ParseJSON(Result.Response[0]);
+        var email = response.email;
+        var valid = response.valid;
+        var failedValidation = response.failedValidation;
+        if (Result.StatusCode == 200 && !!failedValidation) {
+            geraLog(email, valid, failedValidation);
+        }
+    } catch (e) {
+        geraLog(current_BU, "validateEmail Error", Stringify(e).replace(/(?:\\[rn]|[\r\n]+)+/g, ""));
+    }
+}
+
+function lerDadosDE() {
+    try {
+
+        var config = {
+            name: "processamento_list_detective",
+            cols: [
+                "EmailAddress"
+            ],
+            filter: null,
+            opts: {
+                BatchSize: 2500
+            },
+            props: {}
+        }
+
+        var result = [],
+            moreData = true,
+            reqID = req = null;
+
+        while (moreData) {
+
+            moreData = false;
+            if (reqID) config.props.ContinueRequest = reqID;
+            var req = api.retrieve("DataExtensionObject[" + config.name + "]", config.cols, config.filter, config.opts, config.props);
+            if (req) {
+                moreData = req.HasMoreRows;
+                reqID = req.RequestID;
+                var results = req.Results;
+                for (var k in results) {
+                    var props = results[k].Properties;
+                    var o = {};
+                    for (var i in props) {
+                        var key = props[i].Name;
+                        var val = props[i].Value
+                        if (key.indexOf("_") != 0) o[key] = val;
+                    }
+                    result.push(o);
+                }
+            }
+        }
+        return result;
+    } catch (error) {
+        Write(Stringify(error));
+    }
+}
+
+if (tokenMktCloud) {
+    var data = lerDadosDE();
+    for (var i = 0; i < data.length; i++) {
+        var payload = {
+            email: data[i].EmailAddress,
+            validators: ["SyntaxValidator", "ListDetectiveValidator"]
+        };
+        //Write(Stringify(payload));
+        validateEmail(payload, tokenMktCloud);
+    }
+} 
+</script>
