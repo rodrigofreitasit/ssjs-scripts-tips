@@ -2,39 +2,58 @@
 
 Platform.Load("Core", "1.1.2");
 var api = new Script.Util.WSProxy();
-var current_BU = "XXXXXXX";
-var authURL = 'https://XXXXXXXXXXXXXXXXXXXXXX.auth.marketingcloudapis.com'
-var tokenMktCloud = tokenMktCloud();
+var current_BU = "XXXXXXXXXX";
+var authURL = 'https://XXXXXXXXXXXXXX.auth.marketingcloudapis.com'
+var tokenMktCloud = geraTokenMkt();
 
-function tokenMktCloud() {
+function geraTokenMkt() {
     try {
         var urlToken = authURL + '/v2/token';
         var ContentType = 'application/json';
         var payload = {
-            client_id: "XXXXXXXXXXXXXXXXXXXX",
-            client_secret: "XXXXXXXXXXXXXXXXXXXXXX",
+            client_id: "XXXXXXXXXXXX",
+            client_secret: "XXXXXXXXXXXX",
             grant_type: 'client_credentials'
         };
         var Result = HTTP.Post(urlToken, ContentType, Stringify(payload));
         var tokenResponse = Platform.Function.ParseJSON(Result.Response[0]);
         var accessToken = tokenResponse.access_token;
         var rest_instance_url = tokenResponse.rest_instance_url;
+        var startDate = new Date();
+        var expireDate = new Date(startDate.getTime() + 18 * 60000);
+        //logErro("Gerou token", Stringify(tokenResponse).replace(/(?:\\[rn]|[\r\n]+)+/g, ""))
         return {
             "accessToken": accessToken,
-            "rest_instance_url": rest_instance_url
+            "rest_instance_url": rest_instance_url,
+            "expireDate": expireDate
         }
     } catch (e) {
-        geraLog(current_BU, "validateEmail Error API Token", Stringify(e).replace(/(?:\\[rn]|[\r\n]+)+/g, ""));
+        logErro("/v2/token", Stringify(e).replace(/(?:\\[rn]|[\r\n]+)+/g, ""))
     }
 }
 
-function geraLog(email, valid, failedValidation, Result) {
+function geraLog(email, valid, failedValidation) {
     var logErrorDE = DataExtension.Init("retorno_list_detective");
     logErrorDE.Rows.Add({
         email: email,
         valid: valid,
         failedValidation: failedValidation
     });
+}
+
+function logErro(step, message) {
+    var deName = DataExtension.Init("erro_list_detective");
+    deName.Rows.Add({
+        step: step,
+        message: message
+    });
+}
+
+function updateFlag(email) {
+    var deFlagUpdate = DataExtension.Init("processamento_list_detective")
+    deFlagUpdate.Rows.Update({
+        Executar: "False"
+    }, ["EmailAddress"], [email]);
 }
 
 function validateEmail(payload, tokenMktCloud) {
@@ -54,8 +73,9 @@ function validateEmail(payload, tokenMktCloud) {
         if (Result.StatusCode == 200 && !!failedValidation) {
             geraLog(email, valid, failedValidation);
         }
+        updateFlag(email);
     } catch (e) {
-        geraLog(current_BU, "validateEmail Error", Stringify(e).replace(/(?:\\[rn]|[\r\n]+)+/g, ""));
+        logErro("/address/v1/validateEmail", Stringify(e).replace(/(?:\\[rn]|[\r\n]+)+/g, ""))
     }
 }
 
@@ -63,7 +83,7 @@ function lerDadosDE() {
     try {
 
         var config = {
-            name: "processamento_list_detective",
+            name: "processamento_list_detective_part2",
             cols: [
                 "EmailAddress"
             ],
@@ -101,7 +121,7 @@ function lerDadosDE() {
         }
         return result;
     } catch (error) {
-        Write(Stringify(error));
+        logErro("processamento_list_detective", Stringify(error).replace(/(?:\\[rn]|[\r\n]+)+/g, ""))
     }
 }
 
@@ -112,7 +132,10 @@ if (tokenMktCloud) {
             email: data[i].EmailAddress,
             validators: ["SyntaxValidator", "ListDetectiveValidator"]
         };
-        //Write(Stringify(payload));
+        var expireDate1 = tokenMktCloud.expireDate
+        if (new Date(expireDate1) < new Date()) {
+            tokenMktCloud = geraTokenMkt();
+        }
         validateEmail(payload, tokenMktCloud);
     }
 } 
