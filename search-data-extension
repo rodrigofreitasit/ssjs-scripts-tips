@@ -1,0 +1,177 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search DE</title>
+    <link rel="stylesheet" href="https://unpkg.com/@salesforce-ux/design-system/assets/styles/salesforce-lightning-design-system.min.css">
+    <style>
+        .form-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            padding: 10px;
+        }
+
+        .slds-form--stacked {
+            width: 100%;
+            max-width: 500px;
+        }
+
+        @media (max-width: 600px) {
+            .slds-form--stacked {
+                max-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+   <script runat="server">
+
+    Platform.Load("core", "1.1");
+    
+    var api = new Script.Util.WSProxy();
+    function treatBUContext(BUname, DEtype) {
+        if (DEtype == "Data Cloud") {
+            var BUname = "XXXXXX";
+        } else {
+            if (BUname == "XXXXXX") {
+                var BUname = "XXXXXX";
+            } else if (BUname == "XXXXXX") {
+                var BUname = "XXXXXX";
+            } else if (BUname == "XXXXXX") {
+                var BUname = "XXXXXX";
+            } else if (BUname == "XXXXXX XXXXXX") {
+                var BUname = "XXXXXX";
+            } else if (BUname == "XXXXXX") {
+                var BUname = "XXXXXX";
+            } else if (BUname == "XXXXXX") {
+                var BUname = "XXXXXX";
+            }
+        }
+        return BUname;
+    }
+
+    
+    try {
+        var DEprop = Request.GetQueryStringParameter("DEprop");
+        var DEval = Request.GetQueryStringParameter("DEval");
+        var DEtype = Request.GetQueryStringParameter("DEtype");
+        var BUname = Request.GetQueryStringParameter("BUname");
+        var submitted = Request.GetQueryStringParameter("submitted");
+
+        if (submitted) {
+             bucontext = treatBUContext(BUname, DEtype);
+          
+            api.setClientId({"ID": bucontext});
+          
+            var req = api.retrieve("DataExtension", ["Name", "CategoryID"], {
+                Property: DEprop,
+                SimpleOperator: "like",
+                Value: DEval + "%"
+            });
+     
+          if (req && req.length > 0) {
+            var list = [req.Results[0].Name];
+            var id = req.Results[0].CategoryID;
+            while (id > 0) {
+    
+                var req = api.retrieve("DataFolder", ["Name", "ParentFolder.ID"], {
+                    Property: "ID",
+                    SimpleOperator: "equals",
+                    Value: id
+                });
+    
+                list.push(req.Results[0].Name);
+    
+                id = req.Results[0].ParentFolder.ID;
+    
+            }
+            list = list.reverse();
+    
+            var result = list.join(" / ");
+            Variable.SetValue("@result", result);
+          } else {
+            var resp = "Nenhuma DE encontrada com este nome"
+            Variable.SetValue("@result", resp);
+          }   
+        } 
+        } catch (error) {
+          var erro_ = "Erro ao efetuar a pesquisa, verifique o Nome ou Extenal Key e tente novamente"
+            Variable.SetValue("@result", erro_);
+        }   
+</script>
+    <div class="slds-scope">
+        <div class="form-container">
+            <form class="slds-form--stacked" action="%%=RequestParameter('PAGEURL')=%%" method="post">
+                <div class="slds-form-element">
+                    <label class="slds-form-element__label" for="data-extension-type">Tipo de Data Extension</label>
+                    <div class="slds-form-element__control">
+                        <div class="slds-select_container">
+                            <select class="slds-select" id="data-extension-type" name="DEtype">
+                                <option value="Default">Default</option>
+                                <option value="Data Cloud">Data Cloud</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="slds-form-element">
+                    <label class="slds-form-element__label" for="business-unit">Business Unit</label>
+                    <div class="slds-form-element__control">
+                        <div class="slds-select_container">
+                            <select class="slds-select" id="business-unit" name="BUname">
+                                <option value="">--</option>
+                                <option value="Envios PF">XXXXXX</option>
+                                <option value="Envios PJ">XXXXXX XXXXXX</option>
+                                <option value="Rede">XXXXXX</option>
+                                <option value="Envios NCC">XXXXXX XXXXXX</option>
+                                <option value="Dev">XXXXXX - XXXXXX</option>
+                                <option value="Admin">XXXXXX - XXXXXX XXXXXX</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="slds-form-element">
+                    <label class="slds-form-element__label" for="select-01">Selecione uma opção</label>
+                    <div class="slds-form-element__control">
+                        <div class="slds-select_container">
+                            <select class="slds-select" id="select-01" name="DEprop">
+                                <option value="Name">Name</option>
+                                <option value="CustomerKey">External Key</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+              <br>
+                <div class="slds-form-element">
+                    <div class="slds-form-element__control">
+                        <input type="text" name="DEval" id="text-input-01" class="slds-input" maxlength="128" placeholder="Nome ou External key da Data Extension..."/>
+                    </div>
+                </div>
+                <br>
+                <div class="slds-form-element">
+                    <input class="slds-button slds-button_brand" type="submit" value="Pesquisar"/>
+                    <input type="text" name="submitted" value="true" hidden>
+                </div>
+                <br>
+                <div class="slds-box slds-theme_default">
+                    <p>Caminho da DE: <b>%%=v(@result)=%%</b></p>
+                </div>
+            </form>           
+        </div>
+    </div>
+    <script>
+        document.getElementById('data-extension-type').addEventListener('change', function() {
+            var businessUnitSelect = document.getElementById('business-unit');
+            if (this.value === 'Data Cloud') {
+                businessUnitSelect.disabled = true;
+                businessUnitSelect.value = '';
+            } else {
+                businessUnitSelect.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
