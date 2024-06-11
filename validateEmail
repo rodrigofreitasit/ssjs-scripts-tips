@@ -2,17 +2,21 @@
 
 Platform.Load("Core", "1.1.2");
 var api = new Script.Util.WSProxy();
-var current_BU = "XXXXXXXXXX";
-var authURL = 'https://XXXXXXXXXXXXXX.auth.marketingcloudapis.com'
+var current_BU = "XXXXXXX";
+var authURL = 'https://XXXXXXXXX.auth.marketingcloudapis.com'
 var tokenMktCloud = geraTokenMkt();
 
+/**
+ * Generates a token for marketing purposes.
+ * @returns {Object} An object containing the access token, the REST instance URL, and the expiration date.
+ */
 function geraTokenMkt() {
     try {
         var urlToken = authURL + '/v2/token';
         var ContentType = 'application/json';
         var payload = {
-            client_id: "XXXXXXXXXXXX",
-            client_secret: "XXXXXXXXXXXX",
+            client_id: "XXXXXXXXXX",
+            client_secret: "XXXXXXXXX",
             grant_type: 'client_credentials'
         };
         var Result = HTTP.Post(urlToken, ContentType, Stringify(payload));
@@ -21,7 +25,7 @@ function geraTokenMkt() {
         var rest_instance_url = tokenResponse.rest_instance_url;
         var startDate = new Date();
         var expireDate = new Date(startDate.getTime() + 18 * 60000);
-        //logErro("Gerou token", Stringify(tokenResponse).replace(/(?:\\[rn]|[\r\n]+)+/g, ""))
+        logErro("Gerou token", Stringify(tokenResponse).replace(/(?:\\[rn]|[\r\n]+)+/g, ""))
         return {
             "accessToken": accessToken,
             "rest_instance_url": rest_instance_url,
@@ -32,8 +36,14 @@ function geraTokenMkt() {
     }
 }
 
+/**
+ * Generates a log entry in the "retorno_list_detective" Data Extension.
+ * @param {string} email - The email address to be logged.
+ * @param {boolean} valid - Indicates whether the email is valid or not.
+ * @param {string} failedValidation - The reason for the failed validation, if applicable.
+ */
 function geraLog(email, valid, failedValidation) {
-    var logErrorDE = DataExtension.Init("retorno_list_detective");
+    var logErrorDE = DataExtension.Init("XXXXXXX");
     logErrorDE.Rows.Add({
         email: email,
         valid: valid,
@@ -42,7 +52,7 @@ function geraLog(email, valid, failedValidation) {
 }
 
 function logErro(step, message) {
-    var deName = DataExtension.Init("erro_list_detective");
+    var deName = DataExtension.Init("XXXXXX");
     deName.Rows.Add({
         step: step,
         message: message
@@ -50,12 +60,20 @@ function logErro(step, message) {
 }
 
 function updateFlag(email) {
-    var deFlagUpdate = DataExtension.Init("processamento_list_detective")
+    var deFlagUpdate = DataExtension.Init("XXXXXXX")
     deFlagUpdate.Rows.Update({
         Executar: "False"
     }, ["EmailAddress"], [email]);
 }
 
+/**
+ * Validates an email address using a REST API.
+ *
+ * @param {Object} payload - The payload containing the email address to validate.
+ * @param {Object} tokenMktCloud - The tokenMktCloud object containing the REST instance URL and access token.
+ * @returns {void}
+ * @throws {Error} If an error occurs during the validation process.
+ */
 function validateEmail(payload, tokenMktCloud) {
     try {
         var Url = tokenMktCloud.rest_instance_url + '/address/v1/validateEmail';
@@ -79,11 +97,17 @@ function validateEmail(payload, tokenMktCloud) {
     }
 }
 
+/**
+ * Retrieves data from a Data Extension and returns an array of objects.
+ * Each object represents a row in the Data Extension and contains the specified columns.
+ * 
+ * @returns {Array} An array of objects representing the rows in the Data Extension.
+ */
 function lerDadosDE() {
     try {
 
         var config = {
-            name: "processamento_list_detective_part2",
+            name: "XXXXXXX",
             cols: [
                 "EmailAddress"
             ],
@@ -121,9 +145,15 @@ function lerDadosDE() {
         }
         return result;
     } catch (error) {
-        logErro("processamento_list_detective", Stringify(error).replace(/(?:\\[rn]|[\r\n]+)+/g, ""))
+        logErro("XXXXXXXX", Stringify(error).replace(/(?:\\[rn]|[\r\n]+)+/g, ""))
     }
 }
+
+/**
+ * This script validates email addresses using SyntaxValidator and ListDetectiveValidator.
+ * It iterates through a list of email addresses and sends each address to the validateEmail function.
+ * If the tokenMktCloud has expired, it generates a new token and logs an error message.
+ */
 
 if (tokenMktCloud) {
     var data = lerDadosDE();
@@ -132,11 +162,12 @@ if (tokenMktCloud) {
             email: data[i].EmailAddress,
             validators: ["SyntaxValidator", "ListDetectiveValidator"]
         };
+        //Write(Stringify(payload));
         var expireDate1 = tokenMktCloud.expireDate
         if (new Date(expireDate1) < new Date()) {
             tokenMktCloud = geraTokenMkt();
+            logErro("if data expirada")
         }
         validateEmail(payload, tokenMktCloud);
     }
-} 
-</script>
+} < /script>
