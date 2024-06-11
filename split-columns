@@ -1,0 +1,87 @@
+<script runat="server">
+/**
+ * This SSJS script retrieves data from a Data Extension, splits the values in the 'emails' column by ';', 
+ * and inserts each email value along with the corresponding 'subkey' value into another Data Extension.
+ */
+Platform.Load("Core", "1.1.2");
+var api = new Script.Util.WSProxy();
+
+/**
+ * Retrieves data from a Data Extension.
+ * @returns {Array} An array of objects containing the retrieved data.
+ */
+function lerDadosDE() {
+    try {
+        var config = {
+            name: "tabela_modelo_split",
+            cols: [
+                "subkey",
+                "emails"
+            ],
+            filter: null,
+            opts: {
+                BatchSize: 2500
+            },
+            props: {}
+        }
+
+        var result = [],
+            moreData = true,
+            reqID = req = null;
+
+        while (moreData) {
+
+            moreData = false;
+            if (reqID) config.props.ContinueRequest = reqID;
+            var req = api.retrieve("DataExtensionObject[" + config.name + "]", config.cols, config.filter, config.opts, config.props);
+            if (req) {
+                moreData = req.HasMoreRows;
+                reqID = req.RequestID;
+                var results = req.Results;
+                for (var k in results) {
+                    var props = results[k].Properties;
+                    var o = {};
+                    for (var i in props) {
+                        var key = props[i].Name;
+                        var val = props[i].Value
+                        if (key.indexOf("_") != 0) o[key] = val;
+                    }
+                    result.push(o);
+                }
+            }
+        }
+        return result;
+    } catch (error) {
+        Write("Erro: ", Stringify(error).replace(/(?:\\[rn]|[\r\n]+)+/g, ""))
+    }
+}
+
+/**
+ * Adds a row to the final Data Extension.
+ * @param {Object} rowToInsert - The row object to insert into the Data Extension.
+ */
+function addToFinalDE(rowToInsert){
+  try{
+    var deFinal = DataExtension.Init("de_final_split");
+    var inserted = deFinal.Rows.Add(rowToInsert)
+    Write(inserted)
+  }catch(err){
+    Write(Stringify(err));
+  }
+}
+
+var data = lerDadosDE();
+for (var i = 0; i < data.length; i++) {
+    var emails = data[i].emails.split(';');
+    var rowToInsert = []
+    for (var j = 0; j < emails.length; j++) {
+        var row = {
+            subkey: data[i].subkey,
+            email: emails[j]
+        };
+        rowToInsert.push(row)
+    }
+    addToFinalDE(rowToInsert);  
+}
+
+</script>
