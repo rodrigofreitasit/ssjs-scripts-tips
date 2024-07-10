@@ -1,0 +1,174 @@
+<!--
+This HTML file contains a form that allows users to clone a Data Extension in Salesforce Marketing Cloud. The form takes input for the Data Extension name and the Business Unit, and upon submission, it calls the "cloneDataExtension" function to clone the Data Extension.
+
+The form is styled using the Salesforce Lightning Design System (SLDS) CSS framework.
+
+The script block within the HTML file contains the "cloneDataExtension" function, which performs the following steps:
+1. Retrieves the submitted form data.
+2. Determines the folder ID based on the selected Business Unit.
+3. Retrieves the Name of the Data Extension to be cloned.
+4. Retrieves the fields of the Data Extension.
+5. Retrieves the rows of the Data Extension based on a filter.
+6. Modifies the fields if necessary.
+7. Generates a new Customer Key for the cloned Data Extension.
+8. Creates a new Data Extension with the cloned structure.
+9. Adds the retrieved rows to the cloned Data Extension.
+10. Sets a variable to indicate the success of the cloning process.
+
+The form also includes placeholders for success and error messages, which are displayed based on the value of the "@isSuccess" variable.
+
+To use this form, the file should be hosted on a server and accessed through a web browser.
+-->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Clone DE</title>
+    <link rel="stylesheet" href="https://cloud.sfmc.XXXX.com.br/salesforce-lightning-design-system" />
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+        }
+        .centered-form-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+   <script runat="server">
+    Platform.Load("core", "1.1");
+ var submitted = Request.GetQueryStringParameter("submitted");
+     if(submitted) {
+        var folderName = Request.GetQueryStringParameter("folderBU");
+        if(folderName == "XX"){
+        folderName = "FOLDERID";
+    } else if(folderName == "XX"){
+        folderName = "FOLDERID";
+    }
+        var extName = Request.GetQueryStringParameter("deName");
+        var resp = cloneDataExtension(extName,folderName);
+    }
+    function cloneDataExtension(extName,folderName) {
+
+        var prox = new Script.Util.WSProxy();
+        prox.setClientId({"ID": Platform.Function.AuthenticatedMemberID()});
+      
+        //var req1 = Folder.Retrieve({Property:'Name',SimpleOperator:'equals',Value:folderName});
+        //req1[0].ID;
+        var FolderID = folderName
+
+        var req2 = DataExtension.Retrieve({Property:"Name",SimpleOperator:"equals",Value:extName});
+        var CustomerKey = req2[0].CustomerKey;
+      
+        var DE = DataExtension.Init(CustomerKey);
+        var fields = DE.Fields.Retrieve();
+        
+        var filter = {
+            LeftOperand: { Property:fields[0]['Name'],SimpleOperator:"isNotNull" },
+            LogicalOperator: "OR",
+            RightOperand: { Property:fields[0]['Name'],SimpleOperator:"isNull" }
+        }
+
+        var records = DE.Rows.Retrieve(filter);
+
+        for(var i = 0; i < fields.length; i++) {
+            if(fields[i]['IsPrimaryKey'] == true ) fields[i]['IsRequired'] = true;
+            if(fields[i]['MaxLength'] == 0 ) fields[i]['MaxLength'] = 250;
+        }
+
+        var NewCustomerKey = Platform.Function.GUID();
+
+        var ClonedDE = {
+            'CustomerKey' : NewCustomerKey,
+            'Name' : extName + '_temp',
+            'CategoryID': FolderID,
+            'Fields' : fields,
+            "SendableDataExtensionField": { 
+                "Name" : "SubscriberKey", 
+                "FieldType" : "Text" 
+            }, 
+            "SendableSubscriberField": {
+                "Name": "Subscriber Key"
+            },
+            "IsSendable": true,
+            "IsTestable": true,
+            "DataRetentionPeriodLength": 1,
+            "DataRetentionPeriod": "Days",
+            "RowBasedRetention": 0,
+            "ResetRetentionPeriodOnImport": 0,
+            "DeleteAtEndOfRetentionPeriod": 0
+        }
+
+        var res = prox.createItem("DataExtension", ClonedDE);
+        var message = res.Results[0].StatusCode + ": " + res.Results[0].StatusMessage;
+
+        try {
+            var DE2 = DataExtension.Init(NewCustomerKey);
+            var res2 = DE2.Rows.Add(records);
+            message += "Records added: " + res2;
+            var isSuccess = res2 > 0 ? true : false;
+            //send to client side
+            Variable.SetValue("@isSuccess", isSuccess);
+        } catch(err) {
+            message += "No records added";
+        }
+  
+        return message;
+    }
+</script>
+<div class="centered-form-container">
+    <div class="slds-container_large slds-p-around_large">
+        <form id="myForm" action="%%=RequestParameter('PAGEURL')=%%" method="post">
+            <div class="slds-form-element">
+                <label class="slds-form-element__legend slds-form-element__label" for="inputText">Data Extension Name</label>
+                <div class="slds-form-element__control">
+                    <input type="text" id="inputText" class="slds-input" name="deName" placeholder="Digite o nome da DE..." />
+                </div>
+            </div>
+
+            <fieldset class="slds-form-element">
+                <legend class="slds-form-element__legend slds-form-element__label">Business Unit</legend>
+                <div class="slds-form-element__control">
+                    <div class="slds-radio">
+                        <input type="radio" id="pj" name="folderBU" value="PJ" required />
+                        <label class="slds-radio__label" for="pj">
+                            <span class="slds-radio_faux"></span>
+                            <span class="slds-form-element__label">PJ</span>
+                        </label>
+                    </div>
+                    <div class="slds-radio">
+                        <input type="radio" id="rede" name="folderBU" value="REDE" />
+                        <label class="slds-radio__label" for="rede">
+                            <span class="slds-radio_faux"></span>
+                            <span class="slds-form-element__label">REDE</span>
+                        </label>
+                    </div>
+                </div>
+            </fieldset>
+            <br>
+            <input class="slds-button slds-button_brand" type="submit" value="Clonar"/>
+            <input type="text" name="submitted" value="true" hidden>
+            <!-- Placeholder for success/error message -->
+          <!-- %%[IF @isSuccess == True THEN]%% -->
+            <div id="formMessage" class="slds-notify_container" style="display: block;">
+                <div class="slds-notify slds-notify_alert slds-theme_alert-texture slds-theme_success" role="alert">
+                    <span class="slds-assistive-text">success</span>
+                    <h2 id="messageContent">Data Extension copiada com sucesso!</h2>
+                </div>
+            </div>
+          <!-- %%[ENDIF IF @isSuccess == False THEN]%% -->
+          <div id="formMessage" class="slds-notify_container" style="display: block;">
+            <div class="slds-notify slds-notify_alert slds-theme_alert-texture slds-theme_error" role="alert">
+                <span class="slds-assistive-text">error</span>
+                <h2 id="messageContent">Erro ao copiar Data Extension, verifique o nome e tente novamente.</h2>
+            </div>
+          </div>
+          <!-- %%[ENDIF]%% -->
+        </form>
+    </div>
+</div>
+</body>
+</html>
