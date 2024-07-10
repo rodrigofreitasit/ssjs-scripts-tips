@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pesquisa AI
+    </title>
+    <link rel="stylesheet" href="https://cloud.sfmc.XXXX.com.br/salesforce-lightning-design-system">
+    <style>
+      .bg_nav {
+        background:white;
+      }
+      #copyButton img {
+        width: 14px;
+        height: 14px;
+      }
+      .form-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        padding: 10px;
+      }
+      .slds-form--stacked {
+        width: 100%;
+        max-width: 500px;
+      }
+      #copyButton {
+        position: relative;
+        display: inline-block;
+      }
+      #copyButton .tooltiptext {
+        visibility: hidden;
+        width: 120px;
+        background-color: #555;
+        color: #fff;
+        text-align: center;
+        padding: 5px 0;
+        border-radius: 6px;
+        position: absolute;
+        z-index: 1;
+        bottom: 125%;
+        /* Position the tooltip above the button */
+        left: 50%;
+        margin-left: -60px;
+        /* Center the tooltip */
+        opacity: 0;
+        transition: opacity 0.3s;
+      }
+      #copyButton:hover .tooltiptext {
+        visibility: visible;
+        opacity: 1;
+      }
+      @media (max-width: 600px) {
+        .slds-form--stacked {
+          max-width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Navigation bar -->
+<div class="bg_nav slds-grid slds-grid_align-spread">
+    <ul class="slds-tabs_default slds-grid">
+      <li class="slds-tabs_default__item slds-text-heading_label slds-grid slds-grid_vertical-align-center" title="Data Extension">
+        <a href="#" class="slds-tabs_default__link" onclick="showForm('form1')">Data Extension</a>
+      </li>
+      <li class="slds-tabs_default__item slds-text-heading_label slds-grid slds-grid_vertical-align-center" title="Asset">
+        <a href="#" class="slds-tabs_default__link" onclick="showForm('form2')">Content Builder</a>
+      </li>
+    </ul>
+  </div>
+    <script runat="server">
+      Platform.Load("core", "1.1");
+      var api = new Script.Util.WSProxy();
+      function treatBUContext(BUname, DEtype) {
+        if (DEtype == "Data Cloud") {
+          var BUname = "XXXXX";
+        }
+        else {
+          if (BUname == "Envios") {
+            var BUname = "XXXX";
+          }
+          else if (BUname == "Envios") {
+            var BUname = "XXXXX";
+          }
+          else if (BUname == "XXXX") {
+            var BUname = "XXXXXXXX";
+          }
+          else if (BUname == "Envios XXX") {
+            var BUname = "XXXXXX";
+          }
+          else if (BUname == "Dev") {
+            var BUname = "XXXXXXX";
+          }
+          else if (BUname == "Admin") {
+            var BUname = "XXXXXX";
+          }
+          else if (BUname == "XXX") {
+            var BUname = "XXXXXXXXX";
+          }
+          else if (BUname == "Aquisição") {
+            var BUname = "XXXX";
+          }
+        }
+        return BUname;
+      }
+      function geraTokenMkt(authURL,clientID,clientSecret) {
+        try {
+            var urlToken = authURL + '/v2/token';
+            var ContentType = 'application/json';
+            var payload = {
+                client_id: clientID,
+                client_secret: clientSecret,
+                grant_type: 'client_credentials'
+            };
+            var Result = HTTP.Post(urlToken, ContentType, Stringify(payload));
+            var tokenResponse = Platform.Function.ParseJSON(Result.Response[0]);
+            var accessToken = tokenResponse.access_token;
+            var rest_instance_url = tokenResponse.rest_instance_url;
+            var startDate = new Date();
+            var expireDate = new Date(startDate.getTime() + 18 * 60000);
+            //logErro("Gerou token", Stringify(tokenResponse).replace(/(?:\\[rn]|[\r\n]+)+/g, ""))
+            return {
+                "accessToken": accessToken,
+                "rest_instance_url": rest_instance_url,
+                "expireDate": expireDate
+            }
+        } catch (e) {
+            //logErro("/v2/token", Stringify(e).replace(/(?:\\[rn]|[\r\n]+)+/g, ""))
+        }
+    }
+      function geraFolderPath(content) {
+        var path = [];
+        var id = content.category.id;
+        var name = content.name;
+        path.push(name);
+        while (id > 0) {
+          var req = api.retrieve("DataFolder", ["Name", "ParentFolder.ID"], {
+            Property: "ID",
+            SimpleOperator: "equals",
+            Value: id
+          });
+          path.push(req.Results[0].Name);
+          id = req.Results[0].ParentFolder.ID;
+        }
+        path = path.reverse();
+        var resultContent = path.join(" > ");
+        if (resultContent){
+          Variable.SetValue("@result", resultContent);
+        }
+        else{
+          var resp = "Nenhum Asset encontrado com este nome na BU"
+          Variable.SetValue("@result", resp);
+        }
+      }
+      try {
+        // Data Extension form
+        var DEprop = Request.GetQueryStringParameter("DEprop");
+        var DEval = Request.GetQueryStringParameter("DEval");
+        var DEtype = Request.GetQueryStringParameter("DEtype");
+        var BUname = Request.GetQueryStringParameter("BUname");
+        
+        //Content form
+        var assetProp = Request.GetQueryStringParameter("assetProp");
+        var assetVal = Request.GetQueryStringParameter("assetVal");
+        
+        //Vars of wich form was submitted
+        var submittedSearch = Request.GetQueryStringParameter("submittedSearch");
+        var submittedContent = Request.GetQueryStringParameter("submittedContent");
+
+        bucontext = treatBUContext(BUname, DEtype);
+        api.setClientId({"ID": bucontext});
+
+        if (submittedSearch) {
+          
+          var req = api.retrieve("DataExtension", ["Name", "CategoryID"], {
+            Property: DEprop,
+            SimpleOperator: "like",
+            Value: DEval + "%"
+          });
+
+          if (req && req.length > 0) {
+            var list = [req.Results[0].Name];
+            var id = req.Results[0].CategoryID;
+            while (id > 0) {
+              var req = api.retrieve("DataFolder", ["Name", "ParentFolder.ID"], {
+                Property: "ID",
+                SimpleOperator: "equals",
+                Value: id
+              }
+                                    );
+              list.push(req.Results[0].Name);
+              id = req.Results[0].ParentFolder.ID;
+            }
+            list = list.reverse();
+            var result = list.join(" > ");
+            if (result){
+              Variable.SetValue("@result", result);
+            }
+            else{
+              var resp = "Erro ao efetuar a pesquisa, verifique o Nome ou Chave Externa e tente novamente"
+              Variable.SetValue("@result", resp);
+            }
+          }
+          else {
+            var resp = "Erro ao efetuar a pesquisa, verifique o Nome ou Chave Externa e tente novamente"
+            Variable.SetValue("@result", resp);
+          }
+        }
+        if(submittedContent){
+          var clientID = Platform.Function.Lookup('tokens_search_de','client_id','mid',bucontext);
+          var clientSecret = Platform.Function.Lookup('tokens_search_de','client_secret','mid',bucontext);
+          var authURL = 'https://XXXXX.auth.marketingcloudapis.com'
+          var tokenMktCloud = geraTokenMkt(authURL,clientID,clientSecret);
+          var endPoint = "asset/v1/content/assets/query"
+          var simpleOperator = "equal"
+          if(assetProp == "Name"){
+            simpleOperator = "like"
+            assetVal.concat("%")
+          }
+          
+          var payload = {
+            "query": {
+              "property": assetProp,
+              "simpleOperator": simpleOperator,
+              "value": assetVal
+            },
+            "sort": [
+              {
+                "property": "id",
+                "direction": "desc"
+              }
+            ],
+            "fields": [
+              "id",
+              "name",
+              "category"
+            ]
+          }
+          
+            try {
+            var Url = tokenMktCloud.rest_instance_url + endPoint;
+            var ContentType = 'application/json';
+            var Payload = Stringify(payload);
+            var HeaderNames = ["Authorization"];
+            var s1 = "Bearer ";
+            var access_Token = tokenMktCloud.accessToken;
+            var HeaderValues = [s1.concat(access_Token)]; // Token caso precise
+            var Result = HTTP.Post(Url, ContentType, Payload, HeaderNames, HeaderValues); //Chamada API
+            var response = Platform.Function.ParseJSON(Result.Response[0]);
+            var content = response.items[0];
+            var resultContent = geraFolderPath(content)
+            }catch (e) {
+              //Write("erro do asset" + e)
+              var erro_ = "Erro ao efetuar a pesquisa, verifique o Nome ou ID e tente novamente"
+              Variable.SetValue("@result", erro_);
+          }
+          
+        }//fim do if
+      }catch(e){
+        var erro_ = "Erro ao efetuar a pesquisa, verifique o Nome e tente novamente"
+        Variable.SetValue("@result", erro_);
+      }
+    </script>
+   
+    <!-- form Data Extension -->
+    <div id="form1" class="slds-scope">
+      <div class="form-container">
+        <form class="slds-form--stacked" action="%%=RequestParameter('PAGEURL')=%%" method="post">
+          <div class="slds-form-element">
+            <label class="slds-form-element__label" for="data-extension-type">Tipo de Data Extension</label>
+            <div class="slds-form-element__control">
+              <div class="slds-select_container">
+                <select class="slds-select" id="data-extension-type" name="DEtype">
+                  <option value="Default">Default</option>
+                  <option value="Data Cloud">Data Cloud</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="slds-form-element">
+            <label class="slds-form-element__label" for="business-unit">Business Unit</label>
+            <div class="slds-form-element__control">
+              <div class="slds-select_container">
+                <select class="slds-select" id="business-unit" name="BUname">
+                  <option value="">--</option>
+                  <option value="Envios PF">Envios PF</option>
+                  <option value="Envios PJ">Envios PJ</option>
+                  <option value="Rede">Rede</option>
+                  <option value="Aquisição Digital">Aquisição Digital</option>
+                  <option value="Iti">Iti</option>
+                  <option value="Envios NCC">Envios NCC</option>
+                  <option value="Dev">BU - Desenvolvimento</option>
+                  <option value="Admin">Admin - Banco Itaú</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="slds-form-element">
+            <label class="slds-form-element__label" for="select-01">Tipo de busca</label>
+            <div class="slds-form-element__control">
+              <div class="slds-select_container">
+                <select class="slds-select" id="select-01" name="DEprop">
+                  <option value="Name">Nome</option>
+                  <option value="CustomerKey">External Key</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <br>
+          <div class="slds-form-element">
+            <div class="slds-form-element__control">
+              <input type="text" name="DEval" id="text-input-01" class="slds-input" maxlength="128" placeholder="Nome ou External key da Data Extension..."/>
+            </div>
+          </div>
+          <br>
+          <div class="slds-form-element">
+            <input class="slds-button slds-button_brand" type="submit" value="Pesquisar"/>
+            <input type="text" name="submittedSearch" value="true" hidden>
+          </div>
+          <br>
+          <div class="slds-box slds-theme_default"> 
+            <p>Caminho: 
+              <span id="pathDE"  style="font-weight: bold;">%%=v(@result)=%%</span>
+            </p>
+          </div>
+        </form>           
+      </div>
+    </div>
+    <!-- form Asset-->
+    <div id="form2" class="slds-scope">
+      <div class="form-container">
+        <form class="slds-form--stacked" action="%%=RequestParameter('PAGEURL')=%%" method="post">
+          <div class="slds-form-element">
+            <label class="slds-form-element__label" for="asset-type">Tipo de Conteúdo</label>
+            <div class="slds-form-element__control">
+              <div class="slds-select_container">
+                <select class="slds-select" id="asset-type" name="contentType">
+                  <option value="Email">Email</option>
+                  <option value="Imagem">Imagem</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="slds-form-element">
+            <label class="slds-form-element__label" for="business-unit">Business Unit</label>
+            <div class="slds-form-element__control">
+              <div class="slds-select_container">
+                <select class="slds-select" id="business-unit" name="BUname">
+                  <option value="Envios XX">Envios XX</option>
+                  <option value="Envios XX">Envios XX</option>
+                  <option value="XXX">XXX</option>
+                  <option value="XXXX Digital">Aquisição Digital</option>
+                  <option value="XXX">XXXXXXXXX</option>
+                  <option value="Envios XXX">Envios XXXXXXXXX</option>
+                  <option value="Dev">Desenvolvimento</option>
+                  <option value="Admin">Admin</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="slds-form-element">
+            <label class="slds-form-element__label" for="select-01">Tipo de busca</label>
+            <div class="slds-form-element__control">
+              <div class="slds-select_container">
+                <select class="slds-select" id="select-01" name="assetProp">
+                  <option value="Id">Id</option>
+                  <option value="Name">Nome</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <br>
+          <div class="slds-form-element">
+            <div class="slds-form-element__control">
+              <input type="text" name="assetVal" id="text-input-01" class="slds-input" maxlength="128" placeholder="Nome do Asset..."/>
+            </div>
+          </div>
+          <br>
+          <div class="slds-form-element">
+            <input class="slds-button slds-button_brand" type="submit" value="Pesquisar"/>
+            <input type="text" name="submittedContent" value="true" hidden>
+          </div>
+          <br>
+          <div class="slds-box slds-theme_default"> 
+            <p>Caminho: 
+              <span id="pathDE" style="font-weight: bold;">%%=v(@result)=%%</span>
+            </p>
+          </div>
+        </form>           
+      </div>
+    </div>
+    <script src="https://cloud.sfmc.XXXX.com.br/copy-to-clipboard"></script>
+    <script src="https://cloud.sfmc.XXXX.com.br/handle-form"></script>
+  </body>
+</html>
