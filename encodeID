@@ -1,0 +1,80 @@
+<script runat = 'server'>
+Platform.Load("Core", "1.1.1");
+var prox = new Script.Util.WSProxy(); //creates proxy for SOAP call
+var deCustKey = 'XXXXX'; //your DE's CustomerKey
+var cols = ["Id", "ID_PESSOA_ENCODE","to_progress"];
+var opts = {
+    BatchSize: 2500
+};
+
+var props = {};
+
+var result = [],
+    moreData = true,
+    reqID = req = null;
+var filter = {
+    Property: "to_progress",
+    SimpleOperator: "equals",
+    Value: "True"
+};
+
+
+while (moreData) {
+    moreData = false;
+    if (reqID) props.ContinueRequest = reqID;
+    var req = prox.retrieve("DataExtensionObject[" + deCustKey + "]", cols, filter,opts, props)
+    if (req) {
+        moreData = req.HasMoreRows;
+        reqID = req.RequestID;
+        var results = req.Results;
+        result.push(results);
+        Write("resulto" + Stringify(result))
+    }
+}
+
+function encodeId(idDecoded){
+    var deToUpdate = DataExtension.Init("PJ_CA_35006_EMPS")
+    var date = new Date();
+    var hour = date.getHours();
+    var minute = date.getMinutes();
+    var second = date.getSeconds();
+    var millisecond = date.getMilliseconds();
+    var possibleChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789" + hour + minute + second + millisecond;
+    var generatedStrings = {};
+    for(var i = 0; i < 1; i++) {
+        var randomStr = '';
+        do {
+            for(var j = 0; j < 10; j++) {
+                var randomPoz = Math.floor(Math.random() * possibleChars.length);
+                randomStr += possibleChars.substring(randomPoz,randomPoz+1);
+            }
+        } while(generatedStrings.hasOwnProperty(randomStr));
+        // console.log(randomStr);
+        generatedStrings[randomStr] = true;
+        deToUpdate.Rows.Update({
+            ID_PESSOA_ENCODE: randomStr,
+            to_progress: "False"
+        }, ["Id"], [idDecoded]);
+    }
+}
+
+var resultFinal = [];
+var resultTemp = result;
+for (var v = 0; v < resultTemp.length; v++) {
+    var tempData = result[v];
+    for (var i = 0; i < tempData.length; i++) {
+        var data = tempData[i].Properties;
+        resultFinal.push({
+            Id: data[0].Value,
+            ID_PESSOA_ENCODE: data[1].Value
+        });
+    }
+}
+
+
+for (var r = 0; r < resultFinal.length; r++) {
+    var idDecoded = resultFinal[r].Id;
+    encodeId(idDecoded);
+}
+
+</script>
