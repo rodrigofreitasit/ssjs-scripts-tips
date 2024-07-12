@@ -392,6 +392,26 @@
       </div>
     </div>
     <script src="https://cloud.sfmc.XXXX.com.br/copy-to-clipboard"></script>
-    <script src="https://cloud.sfmc.XXXX.com.br/handle-form"></script>
+    <script src="https://cloud.sfmc.XXXX.com.br/handle-form">
+      function showForm(formId) {
+  document.getElementById('form1').style.display = 'none';
+  document.getElementById('form2').style.display = 'none';
+  if (formId) {
+    document.getElementById(formId).style.display = 'block';
+    // Save the current form ID in localStorage
+    localStorage.setItem('currentForm', formId);
+  }
+}
+
+// Load the form ID when the page loads
+window.onload = function() {
+  var currentForm = localStorage.getItem('currentForm');
+  if (currentForm) {
+    showForm(currentForm);
+  } else {
+    showForm('form1');
+  }
+};
+    </script>
   </body>
 </html>
