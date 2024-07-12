@@ -1,0 +1,37 @@
+/**
+ * This script moves a Data Extension to a specified folder in Salesforce Marketing Cloud.
+ * It retrieves the folder ID of the target folder using its name, and then updates the CategoryID property of the Data Extension to move it to the target folder.
+ * The script logs the success or failure of the move operation.
+ */
+
+<script runat=server>
+
+    Platform.Load("core","1.1");
+
+    var DataExtensionCustomerKey = "CustomerKey",
+        TargetFolderName = "Pasta Atual";
+        dataExtensionPJ = "Pasta Destiona"
+
+    var TargetFolderProperties = Folder.Retrieve({ Property: "Name", SimpleOperator: "equals", Value: TargetFolderName });
+    var TargetFolderFolderID = TargetFolderProperties[0].ID;  
+
+    var DE = DataExtension.Init(DataExtensionCustomerKey);
+    var obj = {
+        CategoryID : TargetFolderFolderID 
+    }
+    
+    try {
+
+        var Status = DE.Update(obj);
+
+        if(Status == 'OK') {
+            Write('(+) Data Extension "' + DataExtensionCustomerKey + '" was moved to "' + TargetFolderName + '" folder successfully.' + '<br>')
+        } else {
+            Write('(!) Data Extension "' + DataExtensionCustomerKey + '" was not moved to "' + TargetFolderName + ' folder. Error: ' + Status + '<br>')
+        }
+        
+    } catch(err) {
+        Write('(!) Data Extension "' + DataExtensionCustomerKey + '" was not moved to "' + TargetFolderName + ' folder. Error: ' + err + '<br>')
+    }
+
+</script>
