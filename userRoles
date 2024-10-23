@@ -1,0 +1,91 @@
+<script runat="server">
+    Platform.Load("Core", "1.1.1");
+    var prox = new Script.Util.WSProxy();
+    var objProfiles = [];
+
+    var cols = [
+        "ID",
+        "Name",
+        "Email",
+        "ActiveFlag",
+        "Roles",
+        "LastSuccessfulLogin"
+    ];
+
+    var filter1 = {
+        Property: "ActiveFlag",
+        SimpleOperator: "equals",
+        Value: 1
+    };
+    var filter2 = {
+        Property: "Email",
+        SimpleOperator: "notEquals",
+        Value: " "
+    };
+    var complexFilter = {
+        LeftOperand: filter1,
+        LogicalOperator: "AND",
+        RightOperand: filter2
+    };
+    try {
+        var data = prox.retrieve("AccountUser", cols, complexFilter);
+        if (data && data.Results) {
+            for (var i = 0; i < data.Results.length; i++) {
+                var userObject = {};
+                if (
+                    data.Results[i].Email != "" &&
+                    data.Results[i].Email != "noreply@salesforce.com"
+                ) {
+                    objProfiles.push({
+                        ID: data.Results[i].ID,
+                        Name: data.Results[i].Name,
+                        Email: data.Results[i].Email,
+                        ActiveFlag: data.Results[i].ActiveFlag,
+                        Roles: data.Results[i].Roles
+                    });
+                }
+            }
+            var Profiles = [];
+
+            for (var i = 0; i < objProfiles.length; i++) {      
+                var item = objProfiles[i];
+                var profile = {
+                    Name: item.Name,
+                    Email: item.Email,
+                    Roles: []
+                };
+
+                for (var j = 0; j < item.Roles.length; j++) {
+                    var role = item.Roles[j];
+                    profile.Roles.push({
+                        Name: role.Name,
+                        Description: role.Description
+                    });
+                }
+
+                Profiles.push(profile);
+            }
+            Write("Active users found: " + Profiles.length);
+            Write("<br>");
+           insertDataExtension(Profiles);
+        } else {
+            Write("No active users found.");
+        }
+    } catch (e) {
+        Write(
+            "Error retrieve: " + Stringify(e).replace(/(?:\\[rn]|[\r\n]+)+/g, "")
+        );
+    }
+  
+      function insertDataExtension(Profiles) {
+        var deExternalKey = "UsersRoles";
+        var de = DataExtension.Init(deExternalKey);
+        for(var i = 0; i < Profiles.length;i++){
+        var status = de.Rows.Add({
+          Name: Profiles[i].Name,
+          Email: Profiles[i].Email,
+          Roles: Stringify(Profiles[i].Roles)
+         });
+        }
+    }
+</script>
