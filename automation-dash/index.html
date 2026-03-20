@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Automation Dashboard</title>
+
+  <!-- Importar SLDS CSS -->
+ <link rel="stylesheet" href="https://cloud.mail.c6bank.com.br/salesforce-lightning-design-system.min.css">
+
+  <style>
+    /* Pequenas customizações para manter cores e tamanho */
+    body {
+      padding: 20px;
+      font-family: 'Nunito', 'Trebuchet MS', sans-serif;
+      background-color: white;
+      color: #242424;
+    }
+
+    a {
+      text-decoration: underline dotted;
+      color: #242424;
+    }
+
+    /* Indicadores de alerta */
+    .alert-indicator {
+      display: inline-block;
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+    }
+
+    .alert-red {
+      background-color: red;
+    }
+
+    .alert-yellow {
+      background-color: #ffc107;
+    }
+
+    .alert-green {
+      background-color: green;
+    }
+    /* Melhorar contraste dos labels dos radio buttons */
+    .slds-radio_button__label .slds-form-element__label {
+      color: #706e6b !important;
+      font-weight: 600;
+      text-shadow: none;
+      transition: color 0.2s;
+    }
+    /* Quando o radio está selecionado, deixar branco e com sombra */
+    input[type="radio"]:checked + .slds-radio_button__label .slds-form-element__label {
+      color: #fff !important;
+      text-shadow: 0 1px 2px #0004, 0 0 1px #0002;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Tabs para navegação dinâmica -->
+  <div class="slds-tabs_default slds-m-bottom_large">
+    <ul class="slds-tabs_default__nav" role="tablist">
+      <li class="slds-tabs_default__item slds-is-active" id="tab-dashboard" title="Dashboard" role="presentation">
+        <a class="slds-tabs_default__link" href="#" role="tab" tabindex="0" aria-selected="true" aria-controls="dashboardTab" onclick="showTab('dashboard')">🚨 Dashboard</a>
+      </li>
+      <li class="slds-tabs_default__item" id="tab-cadastro" title="Cadastro de Automações" role="presentation">
+        <a class="slds-tabs_default__link" href="#" role="tab" tabindex="-1" aria-selected="false" aria-controls="cadastroTab" onclick="showTab('cadastro')">
+          <span style="display: flex; align-items: center; gap: 0.5em;">
+            <svg style="width:1.2em;height:1.2em;vertical-align:middle;" viewBox="0 0 24 24"><path fill="#0070d2" d="M19,3A2,2 0 0,1 21,5V19A2,2 0 0,1 19,21H5A2,2 0 0,1 3,19V5A2,2 0 0,1 5,3H19M19,5H5V19H19V5M17,7V9H7V7H17M17,11V13H7V11H17M17,15V17H7V15H17Z" /></svg>
+            Cadastro de Automações
+          </span>
+        </a>
+      </li>
+    </ul>
+  </div>
+
+  <!-- Conteúdo das abas -->
+  <div id="dashboardTab" class="tab-content">
+    <header class="slds-m-bottom_medium">
+    <h1 class="slds-text-heading_large slds-text-color_default slds-align_absolute-center">
+      Automation Dashboard 🚨
+    </h1>
+    <h2 class="slds-text-body_regular slds-m-top_small">
+      Existem queries e automações próximas do tempo limite de execução
+      <a href="https://help.salesforce.com/s/articleView?id=mktg.mc_as_optimize_the_query_activity.htm&type=5" target="_blank">(30 minutos)</a>.
+      Revise o quanto antes para evitar falhas, prevenir o não disparo de campanhas e garantir a performance ideal no Marketing Cloud.
+    </h2>
+  </header>
+
+  <main>
+    <!-- Filtros -->
+    <div class="slds-grid slds-wrap slds-grid_align-spread slds-grid_vertical-align-center slds-m-bottom_large" style="gap: 1rem;">
+      <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-12">
+        <!--<button id="btnUrgentes" class="slds-button slds-button_destructive" style="margin-bottom: 8px;">Mostrar Automações Urgentes</button>-->
+      </div>
+      <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-12">
+        <fieldset class="slds-form-element">
+          <legend class="slds-form-element__legend slds-form-element__label">Filtrar por:</legend>
+          <div class="slds-form-element__control">
+            <div class="slds-radio_button-group" role="radiogroup">
+              <span class="slds-button slds-radio_button">
+                <input type="radio" name="filterType" id="filterAutomation" value="automation" checked />
+                <label class="slds-radio_button__label" for="filterAutomation">
+                  <span class="slds-radio_faux"></span>
+                  <span class="slds-form-element__label">Nome da Automação</span>
+                </label>
+              </span>
+              <span class="slds-button slds-radio_button">
+                <input type="radio" name="filterType" id="filterActivity" value="activity" />
+                <label class="slds-radio_button__label" for="filterActivity">
+                  <span class="slds-radio_faux"></span>
+                  <span class="slds-form-element__label">Nome da Atividade</span>
+                </label>
+              </span>
+            </div>
+          </div>
+        </fieldset>
+      </div>
+
+      <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12">
+        <div class="slds-form-element">
+          <label class="slds-form-element__label" for="searchInput">
+            Pesquise pelo nome da atividade ou automação
+          </label>
+          <div class="slds-form-element__control">
+            <input type="text" id="searchInput" class="slds-input" placeholder="Digite para pesquisar..." />
+          </div>
+        </div>
+      </div>
+
+      <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12">
+        <div class="slds-form-element">
+          <label class="slds-form-element__label" for="activityDescriptionFilter">Filtro pelo tipo de atividade:</label>
+          <div class="slds-form-element__control">
+            <select id="activityDescriptionFilter" class="slds-select">
+          <option value="">Selecione tipo de atividade</option>
+          <option value="Data Extract">Data Extract</option>
+          <option value="Send Email">Send Email</option>
+          <option value="Data Factory Utility Activity">Data Factory Utility Activity</option>
+          <option value="Data Copy or Import">Data Copy or Import</option>
+          <option value="SQL Query">SQL Query</option>
+          <option value="Script">Script</option>
+          <option value="Journey Builder Event Activity">Journey Builder Event Activity</option>
+          <option value="Refresh Mobile Filtered List">Refresh Mobile Filtered List</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12">
+        <div class="slds-form-element">
+          <label class="slds-form-element__label" for="statusFilter">Filtro pelo status:</label>
+          <div class="slds-form-element__control">
+            <select id="statusFilter" class="slds-select">
+              <option value="">Selecione o status</option>
+              <option value="red">Critíco</option>
+              <option value="yellow">Atenção</option>
+              <option value="green">Ok</option>
+            </select>
+          </div>
+        </div>
+        </div>
+
+        <!-- Dropdown de período para erros -->
+        <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-12">
+          <form id="formPeriodo" method="get" style="margin-bottom:0;">
+            <div class="slds-form-element">
+              <label class="slds-form-element__label" for="periodoErros">Erros nos últimos:</label>
+              <div class="slds-form-element__control">
+                %%[
+                  SET @periodo = RequestParameter("periodoErros")
+                  IF Empty(@periodo) THEN SET @periodo = 7 ENDIF
+                ]%%
+                <select id="periodoErros" name="periodoErros" class="slds-select" onchange="document.getElementById('formPeriodo').submit();">
+                  <option value="7" %%[IF @periodo == 7 THEN]%%selected%%[ENDIF]%%>7 dias</option>
+                  <option value="15" %%[IF @periodo == 15 THEN]%%selected%%[ENDIF]%%>15 dias</option>
+                  <option value="30" %%[IF @periodo == 30 THEN]%%selected%%[ENDIF]%%>30 dias</option>
+                  <option value="60" %%[IF @periodo == 60 THEN]%%selected%%[ENDIF]%%>60 dias</option>
+                  <option value="90" %%[IF @periodo == 90 THEN]%%selected%%[ENDIF]%%>90 dias</option>
+                </select>
+              </div>
+            </div>
+          </form>
+        </div>
+    </div>
+
+    <table class="slds-table slds-table_bordered slds-table_cell-buffer slds-table_striped" role="grid" aria-label="Automation Dashboard Table">
+      <thead>
+        <tr class="slds-line-height_reset">
+          <th scope="col">
+            <div class="slds-truncate" title="Nome Automação">Nome Automação</div>
+          </th>
+          <th scope="col">
+            <div class="slds-truncate" title="Nome Atividade">Nome Atividade</div>
+          </th>
+          <th scope="col">
+            <div class="slds-truncate" title="Média Duração (minutos)">
+              Média Duração (minutos)
+              <button id="sortAvgDuration" class="slds-button slds-button_icon slds-button_icon-border-filled" title="Ordenar">
+                <svg class="slds-button__icon" aria-hidden="true" viewBox="0 0 52 52">
+                  <path d="M26 15L15 30H37L26 15z" fill="currentColor" />
+                </svg>
+                <span class="slds-assistive-text">Ordenar por duração</span>
+              </button>
+            </div>
+          </th>
+          <th scope="col">
+            <div class="slds-truncate" title="Tipo de Atividade">Tipo de Atividade</div>
+          </th>
+          <th scope="col">
+            <div class="slds-truncate" title="Status">Status</div>
+          </th>
+            <th scope="col">
+              <div class="slds-truncate" title="Erros no Período" id="colPeriodo">Erros no Período</div>
+            </th>
+        </tr>
+      </thead>
+      <tbody id="tableBody">
+          %%[
+          /* Sempre traz todos os registros para o JS filtrar na tela */
+          SET @rows = LookupRows("dash-automacoes", "processLP", "true")
+          FOR @i = 1 TO RowCount(@rows) DO
+            SET @row = Row(@rows, @i)
+            SET @AutomationName = Field(@row, "AutomationName")
+            SET @ActivityName = Field(@row, "ActivityName")
+            SET @AvgDuration = Field(@row, "AvgDuration")
+            SET @ActivityDescription = Field(@row, "ActivityDescription")
+
+            /* Determinar a cor do alerta */
+            SET @AlertColor = IIF(@AvgDuration > 25, "red", IIF(@AvgDuration >= 20, "yellow", "green"))
+
+            /* Buscar e somar TotalErros do período na de_automation_erros_x_dias_final considerando o tipo de atividade */
+            SET @errosRows = LookupRows("de_automation_erros_x_dias_final", "AutomationName", @AutomationName, "PeriodoDias", @periodo, "TipoAtividade", @ActivityDescription, "ActivityName", @ActivityName)
+            SET @TotalErros = 0
+            IF RowCount(@errosRows) > 0 THEN
+              FOR @j = 1 TO RowCount(@errosRows) DO
+                SET @erroRow = Row(@errosRows, @j)
+                SET @TotalErros = Add(@TotalErros, Field(@erroRow, "TotalErros"))
+              NEXT @j
+            ENDIF
+          ]%%
+          <tr>
+            <td data-label="Nome Automação">%%=v(@AutomationName)=%%</td>
+            <td data-label="Nome Atividade">%%=v(@ActivityName)=%%</td>
+            <td data-label="Média Duração (minutos)">%%=v(@AvgDuration)=%%</td>
+            <td data-label="Tipo de Atividade">%%=v(@ActivityDescription)=%%</td>
+            <td data-label="Status">
+              <span class="alert-indicator alert-%%=v(@AlertColor)=%%"></span>
+            </td>
+            <td data-label="Erros no Período">%%=v(@TotalErros)=%%</td>
+          </tr>
+          %%[ NEXT @i ]%%
+      </tbody>
+    </table>
+
+  </main>
+  </div>
+
+  <div id="cadastroTab" class="tab-content" style="display:none;">
+    <iframe src="https://mclxnbxyjx1z9cgybqy8151mrmy0.pub.sfmc-content.com/mxednampj25" title="Cadastro de Automações" style="width:100%;min-height:80vh;border:0;border-radius:8px;box-shadow:0 2px 8px #0001;"></iframe>
+  </div>
+
+  %%[
+  /* Buscar automações urgentes cadastradas */
+  VAR @rowsUrgentes, @iUrgente, @rowUrgente, @listaUrgentes
+  SET @rowsUrgentes = LookupRows('de_automacoes_urgentes_dash', 'IsUrgente', 'true')
+  SET @listaUrgentes = ''
+  FOR @iUrgente = 1 TO RowCount(@rowsUrgentes) DO
+    SET @rowUrgente = Row(@rowsUrgentes, @iUrgente)
+    SET @nomeUrgente = Field(@rowUrgente, 'AutomationName')
+    SET @listaUrgentes = Concat(@listaUrgentes, IIF(@iUrgente > 1, ',', ''), @nomeUrgente)
+  NEXT @iUrgente
+  ]%%
+  <script>
+    // Função para alternar abas
+    function showTab(tab) {
+      const dashboardTab = document.getElementById('dashboardTab');
+      const cadastroTab = document.getElementById('cadastroTab');
+      const tabDashboard = document.getElementById('tab-dashboard');
+      const tabCadastro = document.getElementById('tab-cadastro');
+      if(tab === 'dashboard') {
+        dashboardTab.style.display = '';
+        cadastroTab.style.display = 'none';
+        tabDashboard.classList.add('slds-is-active');
+        tabCadastro.classList.remove('slds-is-active');
+      } else {
+        dashboardTab.style.display = 'none';
+        cadastroTab.style.display = '';
+        tabDashboard.classList.remove('slds-is-active');
+        tabCadastro.classList.add('slds-is-active');
+      }
+    }
+
+    let filterType = 'automation';
+
+    document.querySelectorAll('input[name="filterType"]').forEach(radio => {
+      radio.addEventListener('change', function () {
+        filterType = this.value;
+        applyFilters();
+      });
+    });
+
+    function applyFilters() {
+      const searchFilter = document.getElementById('searchInput').value.toLowerCase();
+      const activityFilter = document.getElementById('activityDescriptionFilter').value.toLowerCase();
+      const statusFilter = document.getElementById('statusFilter').value.toLowerCase();
+      const rows = document.querySelectorAll('#tableBody tr');
+
+      rows.forEach(row => {
+        const automationName = row.cells[0].textContent.toLowerCase();
+        const activityName = row.cells[1].textContent.toLowerCase();
+        const activityDescription = row.cells[3].textContent.toLowerCase();
+        const statusClass = row.querySelector('.alert-indicator').classList;
+        const status = statusFilter === "" || statusClass.contains(`alert-${statusFilter}`);
+
+        const matchesSearch =
+          filterType === 'automation' ?
+          automationName.includes(searchFilter) :
+          activityName.includes(searchFilter);
+        const matchesActivity = activityFilter === "" || activityDescription === activityFilter;
+
+        if (matchesSearch && matchesActivity && status) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      });
+    }
+
+    document.getElementById('searchInput').addEventListener('keyup', applyFilters);
+    document.getElementById('activityDescriptionFilter').addEventListener('change', applyFilters);
+    document.getElementById('statusFilter').addEventListener('change', applyFilters);
+
+    // Ao trocar o período, manter os filtros atuais na URL
+    document.getElementById('periodoErros').addEventListener('change', function () {
+      var periodo = this.value;
+      var atividade = document.getElementById('activityDescriptionFilter').value;
+      var status = document.getElementById('statusFilter').value;
+      var search = document.getElementById('searchInput').value;
+      var filterType = document.querySelector('input[name="filterType"]:checked').value;
+      var url = new URL(window.location.href);
+      url.searchParams.set('periodoErros', periodo);
+      if (atividade) {
+        url.searchParams.set('activityDescription', atividade);
+      } else {
+        url.searchParams.delete('activityDescription');
+      }
+      if (status) {
+        url.searchParams.set('status', status);
+      } else {
+        url.searchParams.delete('status');
+      }
+      if (search) {
+        url.searchParams.set('search', search);
+      } else {
+        url.searchParams.delete('search');
+      }
+      if (filterType) {
+        url.searchParams.set('filterType', filterType);
+      } else {
+        url.searchParams.delete('filterType');
+      }
+      window.location.href = url.toString();
+    });
+
+    // Restaurar filtros após reload
+    window.addEventListener('DOMContentLoaded', function () {
+      var params = new URLSearchParams(window.location.search);
+      var atividade = params.get('activityDescription');
+      var status = params.get('status');
+      var search = params.get('search');
+      var filterType = params.get('filterType');
+      if (atividade) {
+        document.getElementById('activityDescriptionFilter').value = atividade;
+      }
+      if (status) {
+        document.getElementById('statusFilter').value = status;
+      }
+      if (search) {
+        document.getElementById('searchInput').value = search;
+      }
+      if (filterType) {
+        document.getElementById(filterType === 'automation' ? 'filterAutomation' : 'filterActivity').checked = true;
+      }
+      applyFilters();
+    });
+
+    // Ordenação por Média Duração (minutos)
+    let sortAsc = true;
+    document.getElementById('sortAvgDuration').addEventListener('click', function () {
+      const tbody = document.getElementById('tableBody');
+      const rowsArray = Array.from(tbody.querySelectorAll('tr'));
+      rowsArray.sort((a, b) => {
+        // Coluna 2 = Média Duração (minutos)
+        const valA = parseFloat(a.cells[2].textContent.replace(',', '.')) || 0;
+        const valB = parseFloat(b.cells[2].textContent.replace(',', '.')) || 0;
+        return sortAsc ? valA - valB : valB - valA;
+      });
+      // Remover linhas antigas
+      while (tbody.firstChild) tbody.removeChild(tbody.firstChild);
+      // Adicionar linhas ordenadas
+      rowsArray.forEach(row => tbody.appendChild(row));
+      sortAsc = !sortAsc;
+    });
+  </script>
+</body>
+</html>
