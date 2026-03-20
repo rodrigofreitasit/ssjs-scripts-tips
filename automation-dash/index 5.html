@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Automation Dashboard — Marketing Cloud</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <style>
+    /* ── Salesforce Light (padrão) ── */
+    :root {
+      --bg:         #f3f2f2;
+      --surface:    #ffffff;
+      --surface2:   #f3f2f2;
+      --border:     #dddbda;
+      --border2:    #c9c7c5;
+      --text:       #181818;
+      --muted:      #706e6b;
+      --blue:       #0176d3;
+      --blue-glow:  rgba(1,118,211,.15);
+      --red:        #ba0517;
+      --red-glow:   rgba(186,5,23,.1);
+      --amber:      #dd7a01;
+      --amber-glow: rgba(221,122,1,.12);
+      --green:      #2e844a;
+      --green-glow: rgba(46,132,74,.12);
+      --radius:     10px;
+      --font-ui:    'Syne', sans-serif;
+      --font-mono:  'JetBrains Mono', monospace;
+      --topbar-bg:  rgba(255,255,255,.95);
+      --shadow:     0 1px 4px rgba(0,0,0,.1);
+    }
+
+    /* ── Dark theme ── */
+    [data-theme="dark"] {
+      --bg:         #080d1a;
+      --surface:    #0f1629;
+      --surface2:   #161e35;
+      --border:     #1e2d50;
+      --border2:    #263558;
+      --text:       #e2e8f0;
+      --muted:      #64748b;
+      --blue:       #3b82f6;
+      --blue-glow:  rgba(59,130,246,.25);
+      --red:        #ef4444;
+      --red-glow:   rgba(239,68,68,.2);
+      --amber:      #f59e0b;
+      --amber-glow: rgba(245,158,11,.2);
+      --green:      #22c55e;
+      --green-glow: rgba(34,197,94,.2);
+      --topbar-bg:  rgba(8,13,26,.92);
+      --shadow:     0 1px 4px rgba(0,0,0,.4);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-ui);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0'/%3E%3C/svg%3E");
+      pointer-events: none; z-index: 0;
+      transition: opacity .3s;
+    }
+    [data-theme="dark"] body::before { opacity: 1; }
+
+    /* Transição suave de tema em todos os elementos */
+    *, *::before, *::after { transition: background-color .25s, border-color .25s, color .15s; }
+    *, *::before, *::after { box-sizing: border-box; }
+
+    /* Top bar */
+    .topbar {
+      position: sticky; top: 0; z-index: 100;
+      background: var(--topbar-bg);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      padding: 0 2rem;
+      display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+      height: 60px;
+    }
+
+    .topbar-brand {
+      display: flex; align-items: center; gap: .75rem;
+      font-weight: 800; font-size: 1.05rem; letter-spacing: -.01em;
+    }
+
+    .brand-icon {
+      width: 32px; height: 32px;
+      background: linear-gradient(135deg, var(--blue) 0%, #6366f1 100%);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .9rem;
+    }
+
+    /* Theme toggle button */
+    .theme-toggle {
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: 20px;
+      color: var(--muted);
+      cursor: pointer;
+      display: flex; align-items: center; gap: .4rem;
+      font-family: var(--font-ui); font-size: .78rem; font-weight: 600;
+      padding: .25rem .75rem;
+      transition: all .2s;
+      white-space: nowrap;
+    }
+    .theme-toggle:hover { border-color: var(--blue); color: var(--blue); }
+    .theme-toggle .theme-icon { font-size: .9rem; }
+
+    .live-badge {
+      display: flex; align-items: center; gap: .4rem;
+      font-size: .75rem; font-family: var(--font-mono);
+      color: var(--green); background: var(--green-glow);
+      border: 1px solid rgba(34,197,94,.3);
+      border-radius: 20px; padding: .2rem .7rem;
+    }
+
+    .live-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--green);
+      animation: pulse-dot 1.8s ease-in-out infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: .4; transform: scale(.7); }
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex; gap: .25rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: .25rem;
+    }
+
+    .tab-btn {
+      background: transparent; border: none;
+      color: var(--muted);
+      padding: .4rem 1.1rem;
+      border-radius: 7px;
+      font-family: var(--font-ui); font-size: .85rem; font-weight: 600;
+      cursor: pointer;
+      display: flex; align-items: center; gap: .4rem;
+      transition: all .2s;
+    }
+
+    .tab-btn.active {
+      background: var(--surface2);
+      color: var(--text);
+      box-shadow: 0 0 0 1px var(--border2);
+    }
+
+    .tab-btn:hover:not(.active) { color: var(--text); }
+
+    /* Wrapper */
+    .wrapper { position: relative; z-index: 1; padding: 2rem; max-width: 1600px; margin: 0 auto; }
+
+    /* Page header */
+    .page-header { margin-bottom: 2rem; }
+
+    .page-header h1 {
+      font-size: 1.75rem; font-weight: 800; letter-spacing: -.02em;
+      color: var(--text);
+    }
+    [data-theme="dark"] .page-header h1 {
+      background: linear-gradient(90deg, #e2e8f0, #94a3b8);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+
+    .page-header p {
+      margin-top: .4rem;
+      color: var(--muted); font-size: .9rem; line-height: 1.6; max-width: 680px;
+    }
+
+    .page-header p a { color: var(--blue); text-decoration: none; border-bottom: 1px dotted var(--blue); }
+
+    /* KPI cards */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .kpi-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.2rem 1.4rem;
+      position: relative; overflow: hidden;
+      transition: border-color .2s, transform .2s;
+      box-shadow: var(--shadow);
+    }
+    .kpi-card.red   { border-top: 3px solid var(--red); }
+    .kpi-card.amber { border-top: 3px solid var(--amber); }
+    .kpi-card.green { border-top: 3px solid var(--green); }
+    .kpi-card.blue  { border-top: 3px solid var(--blue); }
+
+    .kpi-card:hover { border-color: var(--border2); transform: translateY(-2px); }
+    .kpi-card::after {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,.02) 0%, transparent 60%);
+      pointer-events: none;
+    }
+
+    .kpi-label {
+      font-size: .7rem; font-weight: 700; letter-spacing: .08em;
+      text-transform: uppercase; color: var(--muted);
+    }
+
+    .kpi-value {
+      font-size: 2rem; font-weight: 800; font-family: var(--font-mono);
+      line-height: 1.15; margin-top: .3rem;
+    }
+
+    .kpi-card.red   .kpi-value { color: var(--red); }
+    .kpi-card.amber .kpi-value { color: var(--amber); }
+    .kpi-card.green .kpi-value { color: var(--green); }
+    .kpi-card.blue  .kpi-value { color: var(--blue); }
+    .kpi-sub { font-size: .75rem; color: var(--muted); margin-top: .3rem; }
+
+    .kpi-glow {
+      position: absolute; right: -20px; top: -20px;
+      width: 90px; height: 90px; border-radius: 50%;
+      filter: blur(30px); pointer-events: none; opacity: .2;
+    }
+    [data-theme="dark"] .kpi-glow { opacity: .6; }
+
+    .kpi-card.red   .kpi-glow { background: var(--red); }
+    .kpi-card.amber .kpi-glow { background: var(--amber); }
+    .kpi-card.green .kpi-glow { background: var(--green); }
+    .kpi-card.blue  .kpi-glow { background: var(--blue); }
+
+    /* Filters bar */
+    .filters-bar {
+      display: flex; flex-wrap: wrap; gap: .8rem; align-items: flex-end;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.2rem 1.4rem;
+      margin-bottom: 1.5rem;
+      box-shadow: var(--shadow);
+    }
+
+    .filter-group { display: flex; flex-direction: column; gap: .35rem; flex: 1; min-width: 150px; }
+
+    .filter-label {
+      font-size: .7rem; font-weight: 700; letter-spacing: .07em;
+      text-transform: uppercase; color: var(--muted);
+    }
+
+    .filter-input, .filter-select {
+      background: var(--bg);
+      border: 1px solid var(--border2);
+      border-radius: 7px;
+      color: var(--text);
+      font-family: var(--font-ui); font-size: .85rem;
+      padding: .5rem .8rem;
+      transition: border-color .2s, box-shadow .2s;
+      height: 36px;
+    }
+
+    .filter-input:focus, .filter-select:focus {
+      outline: none;
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px var(--blue-glow);
+    }
+
+    .filter-input::placeholder { color: var(--muted); }
+    .filter-select option { background: var(--surface); }
+
+    .toggle-group { display: flex; gap: .25rem; height: 36px; }
+
+    .toggle-btn {
+      background: var(--bg); border: 1px solid var(--border2);
+      color: var(--muted); font-family: var(--font-ui); font-size: .8rem; font-weight: 600;
+      padding: 0 .9rem; border-radius: 7px; cursor: pointer;
+      transition: all .2s;
+    }
+
+    .toggle-btn.active { background: var(--blue); color: #fff; border-color: var(--blue); }
+    .toggle-btn:hover:not(.active) { color: var(--text); }
+
+    .btn-reset {
+      background: transparent; border: 1px solid var(--border2);
+      color: var(--muted); font-family: var(--font-ui); font-size: .8rem; font-weight: 600;
+      padding: 0 1rem; border-radius: 7px; cursor: pointer; height: 36px;
+      transition: all .2s; white-space: nowrap;
+    }
+
+    .btn-reset:hover { border-color: var(--red); color: var(--red); }
+
+    /* Table */
+    .table-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+
+    .table-header-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1rem 1.4rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .table-title { font-size: .9rem; font-weight: 700; }
+    .table-count { font-size: .8rem; font-family: var(--font-mono); color: var(--muted); }
+
+    table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+
+    thead th {
+      background: var(--surface2);
+      color: var(--muted);
+      font-size: .68rem; font-weight: 700;
+      letter-spacing: .08em; text-transform: uppercase;
+      padding: .75rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+      position: sticky; top: 60px;
+      z-index: 10;
+    }
+
+    thead th.sortable { cursor: pointer; user-select: none; }
+    thead th.sortable:hover { color: var(--blue); }
+
+    thead th .sort-icon {
+      display: inline-block; margin-left: .3rem; opacity: .4;
+      transition: opacity .2s, transform .2s;
+    }
+
+    thead th.sorted-asc  .sort-icon,
+    thead th.sorted-desc .sort-icon { opacity: 1; color: var(--blue); }
+    thead th.sorted-desc .sort-icon { transform: rotate(180deg); }
+
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background .15s;
+    }
+
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: var(--surface2); }
+
+    tbody td { padding: .7rem 1rem; vertical-align: middle; }
+
+    .cell-mono {
+      font-family: var(--font-mono); font-size: .78rem;
+      color: #94a3b8; max-width: 240px;
+    }
+
+    .cell-mono span {
+      display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+
+    .cell-duration { font-family: var(--font-mono); font-weight: 600; font-size: .88rem; }
+    .cell-errors   { font-family: var(--font-mono); font-weight: 600; }
+
+    .errors-0    { color: var(--muted); }
+    .errors-low  { color: var(--amber); }
+    .errors-high { color: var(--red); }
+
+    /* Status pill */
+    .status-pill {
+      display: inline-flex; align-items: center; gap: .4rem;
+      padding: .25rem .7rem;
+      border-radius: 20px; font-size: .72rem; font-weight: 700;
+      letter-spacing: .04em; white-space: nowrap;
+    }
+
+    .status-pill .dot { width: 6px; height: 6px; border-radius: 50%; }
+
+    .s-red    { background: var(--red-glow);   color: var(--red);   border: 1px solid rgba(239,68,68,.3); }
+    .s-amber  { background: var(--amber-glow); color: var(--amber); border: 1px solid rgba(245,158,11,.3); }
+    .s-green  { background: var(--green-glow); color: var(--green); border: 1px solid rgba(34,197,94,.3); }
+
+    .s-red   .dot { background: var(--red);   animation: pulse-dot 1.4s ease-in-out infinite; }
+    .s-amber .dot { background: var(--amber); animation: pulse-dot 2s   ease-in-out infinite; }
+    .s-green .dot { background: var(--green); }
+
+    /* Type badge */
+    .type-badge {
+      display: inline-block;
+      padding: .2rem .55rem;
+      border-radius: 5px;
+      font-size: .68rem; font-weight: 700; font-family: var(--font-mono);
+      background: var(--surface2); color: var(--muted);
+      border: 1px solid var(--border2); white-space: nowrap;
+    }
+
+    .t-sql     { color: #7dd3fc; border-color: rgba(125,211,252,.25); background: rgba(125,211,252,.06); }
+    .t-script  { color: #a78bfa; border-color: rgba(167,139,250,.25); background: rgba(167,139,250,.06); }
+    .t-email   { color: #f9a8d4; border-color: rgba(249,168,212,.25); background: rgba(249,168,212,.06); }
+    .t-extract { color: #86efac; border-color: rgba(134,239,172,.25); background: rgba(134,239,172,.06); }
+    .t-push    { color: #fcd34d; border-color: rgba(252,211,77,.25);  background: rgba(252,211,77,.06); }
+
+    /* Duration bar */
+    .dur-wrap { display: flex; align-items: center; gap: .6rem; }
+    .dur-bar  { flex: 1; height: 4px; border-radius: 2px; background: var(--border2); max-width: 80px; overflow: hidden; }
+    .dur-fill { height: 100%; border-radius: 2px; }
+
+    /* No results */
+    .no-results {
+      text-align: center; padding: 4rem 2rem;
+      color: var(--muted); font-family: var(--font-mono); font-size: .85rem;
+    }
+
+    /* Cadastro iframe */
+    .iframe-wrap { border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); }
+    .iframe-wrap iframe { display: block; width: 100%; min-height: 80vh; border: 0; }
+
+    .tab-content        { display: none; }
+    .tab-content.active { display: block; }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--surface); }
+    ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+    @media (max-width: 768px) {
+      .wrapper { padding: 1rem; }
+      .topbar  { padding: 0 1rem; }
+      .filters-bar { padding: 1rem; }
+      .cell-mono { max-width: 130px; }
+    }
+
+    @keyframes row-in {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    tbody tr { animation: row-in .2s ease both; }
+  </style>
+</head>
+<body>
+
+<!-- Top Bar -->
+<div class="topbar">
+  <div class="topbar-brand">
+    <div class="brand-icon">&#x26A1;</div>
+    <span>Automation Monitor</span>
+  </div>
+  <div class="tabs">
+    <button class="tab-btn active" id="btn-dashboard" onclick="switchTab('dashboard')">&#x1F6A8; Dashboard</button>
+    <button class="tab-btn"        id="btn-cadastro"  onclick="switchTab('cadastro')">&#x1F4CB; Cadastro</button>
+  </div>
+  <div style="display:flex;align-items:center;gap:.75rem;">
+    <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">
+      <span class="theme-icon" id="themeIcon">🌙</span>
+      <span id="themeLabel">Dark</span>
+    </button>
+    <div class="live-badge">
+      <span class="live-dot"></span>LIVE
+    </div>
+  </div>
+</div>
+
+<!-- ════════════ DASHBOARD TAB ════════════ -->
+<div id="tab-dashboard" class="tab-content active">
+  <div class="wrapper">
+
+    <div class="page-header">
+      <h1>Automation Dashboard</h1>
+      <p>
+        Queries e automações próximas do limite de execução
+        <a href="https://help.salesforce.com/s/articleView?id=mktg.mc_as_optimize_the_query_activity.htm&type=5" target="_blank">(30 min)</a>.
+        Revise para evitar falhas e garantir performance no Marketing Cloud.
+      </p>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="kpi-grid">
+      <div class="kpi-card red">
+        <div class="kpi-glow"></div>
+        <div class="kpi-label">Crítico</div>
+        <div class="kpi-value" id="kpi-red">—</div>
+        <div class="kpi-sub">acima de 25 min</div>
+      </div>
+      <div class="kpi-card amber">
+        <div class="kpi-glow"></div>
+        <div class="kpi-label">Atenção</div>
+        <div class="kpi-value" id="kpi-amber">—</div>
+        <div class="kpi-sub">entre 20–25 min</div>
+      </div>
+      <div class="kpi-card green">
+        <div class="kpi-glow"></div>
+        <div class="kpi-label">Ok</div>
+        <div class="kpi-value" id="kpi-green">—</div>
+        <div class="kpi-sub">abaixo de 20 min</div>
+      </div>
+      <div class="kpi-card blue">
+        <div class="kpi-glow"></div>
+        <div class="kpi-label">Total Erros</div>
+        <div class="kpi-value" id="kpi-errors">—</div>
+        <div class="kpi-sub">no período</div>
+      </div>
+      <div class="kpi-card blue">
+        <div class="kpi-glow"></div>
+        <div class="kpi-label">Automações</div>
+        <div class="kpi-value" id="kpi-total">—</div>
+        <div class="kpi-sub">registros</div>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters-bar">
+
+      <div class="filter-group" style="flex:0 0 auto;">
+        <div class="filter-label">Filtrar por</div>
+        <div class="toggle-group">
+          <button class="toggle-btn active" id="toggle-automation" onclick="setFilterType('automation')">Automação</button>
+          <button class="toggle-btn"        id="toggle-activity"   onclick="setFilterType('activity')">Atividade</button>
+        </div>
+      </div>
+
+      <div class="filter-group" style="flex:2;min-width:200px;">
+        <div class="filter-label">Pesquisar</div>
+        <input type="text" class="filter-input" id="searchInput" placeholder="Digite para pesquisar..." />
+      </div>
+
+      <div class="filter-group">
+        <div class="filter-label">Tipo de Atividade</div>
+        <select class="filter-select" id="activityDescriptionFilter">
+          <option value="">Todos os tipos</option>
+          <option value="Data Extract">Data Extract</option>
+          <option value="Send Email">Send Email</option>
+          <option value="Data Factory Utility Activity">Data Factory Utility Activity</option>
+          <option value="Data Copy or Import">Data Copy or Import</option>
+          <option value="SQL Query">SQL Query</option>
+          <option value="Script">Script</option>
+          <option value="Journey Builder Event Activity">Journey Builder Event Activity</option>
+          <option value="Refresh Mobile Filtered List">Refresh Mobile Filtered List</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <div class="filter-label">Status</div>
+        <select class="filter-select" id="statusFilter">
+          <option value="">Todos</option>
+          <option value="red">Crítico</option>
+          <option value="yellow">Atenção</option>
+          <option value="green">Ok</option>
+        </select>
+      </div>
+
+      <!-- Período — form com submit para o AMPscript re-renderizar com o novo valor via RequestParameter -->
+      <div class="filter-group" style="flex:0 0 auto;">
+        <form id="formPeriodo" method="get" style="display:contents;">
+          <div class="filter-label">Erros nos últimos</div>
+          %%[
+            SET @periodo = RequestParameter("periodoErros")
+            IF Empty(@periodo) THEN SET @periodo = 7 ENDIF
+          ]%%
+          <select id="periodoErros" name="periodoErros" class="filter-select"
+                  onchange="submitPeriodo()">
+            <option value="7"  %%[IF @periodo == 7  THEN]%%selected%%[ENDIF]%%>7 dias</option>
+            <option value="15" %%[IF @periodo == 15 THEN]%%selected%%[ENDIF]%%>15 dias</option>
+            <option value="30" %%[IF @periodo == 30 THEN]%%selected%%[ENDIF]%%>30 dias</option>
+            <option value="60" %%[IF @periodo == 60 THEN]%%selected%%[ENDIF]%%>60 dias</option>
+            <option value="90" %%[IF @periodo == 90 THEN]%%selected%%[ENDIF]%%>90 dias</option>
+          </select>
+        </form>
+      </div>
+
+      <div class="filter-group" style="flex:0 0 auto;">
+        <div class="filter-label">&nbsp;</div>
+        <button class="btn-reset" onclick="resetFilters()">&#x2715; Limpar</button>
+      </div>
+
+    </div>
+
+    <!-- Table -->
+    <div class="table-wrap">
+      <div class="table-header-row">
+        <div class="table-title">Registros</div>
+        <div class="table-count" id="tableCount"></div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Nome Automação</th>
+              <th>Nome Atividade</th>
+              <th class="sortable" id="th-duration" onclick="sortBy('duration')">
+                Duração Média <span class="sort-icon">&#x25B2;</span>
+              </th>
+              <th>Tipo de Atividade</th>
+              <th>Status</th>
+              <th class="sortable" id="th-errors" onclick="sortBy('errors')">
+                Erros <span class="sort-icon">&#x25B2;</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+
+            %%[
+            /* AMPscript — busca todos os registros da DE dash-automacoes */
+            SET @rows = LookupRows("dash-automacoes", "processLP", "true")
+            FOR @i = 1 TO RowCount(@rows) DO
+              SET @row                 = Row(@rows, @i)
+              SET @AutomationName      = Field(@row, "AutomationName")
+              SET @ActivityName        = Field(@row, "ActivityName")
+              SET @AvgDuration         = Field(@row, "AvgDuration")
+              SET @ActivityDescription = Field(@row, "ActivityDescription")
+
+              /* Status baseado na duração média */
+              SET @AlertColor = IIF(@AvgDuration > 25, "red", IIF(@AvgDuration >= 20, "yellow", "green"))
+
+              /* Total de erros no período selecionado */
+              SET @errosRows = LookupRows("de_automation_erros_x_dias_final",
+                "AutomationName",  @AutomationName,
+                "PeriodoDias",     @periodo,
+                "TipoAtividade",   @ActivityDescription,
+                "ActivityName",    @ActivityName)
+              SET @TotalErros = 0
+              IF RowCount(@errosRows) > 0 THEN
+                FOR @j = 1 TO RowCount(@errosRows) DO
+                  SET @erroRow    = Row(@errosRows, @j)
+                  SET @TotalErros = Add(@TotalErros, Field(@erroRow, "TotalErros"))
+                NEXT @j
+              ENDIF
+            ]%%
+
+            <!--
+              O AMPscript escreve os atributos data-* com os valores reais.
+              O JS lê esses atributos para filtrar, ordenar e montar as células visuais.
+            -->
+            <tr
+              data-auto="%%=v(@AutomationName)=%%"
+              data-act="%%=v(@ActivityName)=%%"
+              data-type="%%=v(@ActivityDescription)=%%"
+              data-status="%%=v(@AlertColor)=%%"
+              data-duration="%%=v(@AvgDuration)=%%"
+              data-errors="%%=v(@TotalErros)=%%"
+            >
+              <td class="cell-mono">
+                <span title="%%=v(@AutomationName)=%%">%%=v(@AutomationName)=%%</span>
+              </td>
+              <td class="cell-mono">
+                <span title="%%=v(@ActivityName)=%%">%%=v(@ActivityName)=%%</span>
+              </td>
+              <td class="js-dur"></td>
+              <td class="js-type"></td>
+              <td class="js-status"></td>
+              <td class="js-errors"></td>
+            </tr>
+
+            %%[ NEXT @i ]%%
+
+          </tbody>
+        </table>
+        <div id="noResults" class="no-results" style="display:none;">
+          Nenhum resultado encontrado para os filtros aplicados.
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ════════════ CADASTRO TAB ════════════ -->
+<div id="tab-cadastro" class="tab-content">
+  <div class="wrapper">
+    <div class="page-header">
+      <h1>Cadastro de Automações</h1>
+      <p>Gerencie e registre automações monitoradas no dashboard.</p>
+    </div>
+    <div class="iframe-wrap">
+      <iframe src="https://mclxnbxyjx1z9cgybqy8151mrmy0.pub.sfmc-content.com/mxednampj25"
+              title="Cadastro de Automações"></iframe>
+    </div>
+  </div>
+</div>
+
+%%[
+/* AMPscript — lista de automações urgentes (exposta para o JS como string inline) */
+VAR @rowsUrgentes, @iUrgente, @rowUrgente, @listaUrgentes
+SET @rowsUrgentes  = LookupRows('de_automacoes_urgentes_dash', 'IsUrgente', 'true')
+SET @listaUrgentes = ''
+FOR @iUrgente = 1 TO RowCount(@rowsUrgentes) DO
+  SET @rowUrgente    = Row(@rowsUrgentes, @iUrgente)
+  SET @nomeUrgente   = Field(@rowUrgente, 'AutomationName')
+  SET @listaUrgentes = Concat(@listaUrgentes, IIF(@iUrgente > 1, ',', ''), @nomeUrgente)
+NEXT @iUrgente
+]%%
+
+<script>
+// ── Theme toggle ──
+(function () {
+  const saved = localStorage.getItem('sfmc-theme') || 'light';
+  applyTheme(saved);
+})();
+
+function applyTheme(theme) {
+  const html  = document.documentElement;
+  const icon  = document.getElementById('themeIcon');
+  const label = document.getElementById('themeLabel');
+  if (theme === 'dark') {
+    html.setAttribute('data-theme', 'dark');
+    if (icon)  icon.textContent  = '☀️';
+    if (label) label.textContent = 'Light';
+  } else {
+    html.removeAttribute('data-theme');
+    if (icon)  icon.textContent  = '🌙';
+    if (label) label.textContent = 'Dark';
+  }
+  localStorage.setItem('sfmc-theme', theme);
+}
+
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+  applyTheme(current === 'dark' ? 'light' : 'dark');
+}
+
+// ── Estado ──
+let filterType = 'automation';
+let sortCol    = null;
+let sortAsc    = true;
+
+// Urgentes vindos do AMPscript
+const urgentesRaw = '%%=v(@listaUrgentes)=%%';
+const urgentes    = urgentesRaw ? urgentesRaw.split(',').map(s => s.trim()) : [];
+
+// ── Helpers de UI ──
+function getStatusClass(st) {
+  return st === 'red' ? 's-red' : st === 'yellow' ? 's-amber' : 's-green';
+}
+
+function getStatusLabel(st) {
+  return st === 'red' ? 'Crítico' : st === 'yellow' ? 'Atenção' : 'Ok';
+}
+
+function getTypeClass(type) {
+  if (type === 'SQL Query')    return 't-sql';
+  if (type === 'Script')       return 't-script';
+  if (type.includes('Email'))  return 't-email';
+  if (type === 'Data Extract') return 't-extract';
+  if (type.includes('Push'))   return 't-push';
+  return '';
+}
+
+function buildDurCell(dur, st) {
+  const color = st === 'red' ? 'var(--red)' : st === 'yellow' ? 'var(--amber)' : 'var(--green)';
+  const pct   = Math.min((parseFloat(dur) / 70) * 100, 100).toFixed(1);
+  return `<div class="dur-wrap">
+    <span class="cell-duration" style="color:${color};min-width:2.5rem;">${dur}m</span>
+    <div class="dur-bar"><div class="dur-fill" style="width:${pct}%;background:${color};"></div></div>
+  </div>`;
+}
+
+function buildTypeBadge(type) {
+  return `<span class="type-badge ${getTypeClass(type)}">${type}</span>`;
+}
+
+function buildStatusPill(st) {
+  const cls   = getStatusClass(st);
+  const label = getStatusLabel(st);
+  return `<span class="status-pill ${cls}"><span class="dot"></span>${label}</span>`;
+}
+
+function buildErrorsCell(n) {
+  const cls = n == 0 ? 'errors-0' : n <= 3 ? 'errors-low' : 'errors-high';
+  return `<span class="cell-errors ${cls}">${n}</span>`;
+}
+
+// ── Decorar células visuais das linhas escritas pelo AMPscript ──
+function decorateRows() {
+  document.querySelectorAll('#tableBody tr').forEach(tr => {
+    const dur    = tr.dataset.duration || '0';
+    const type   = tr.dataset.type     || '';
+    const st     = tr.dataset.status   || 'green';
+    const errors = parseInt(tr.dataset.errors, 10) || 0;
+
+    tr.querySelector('.js-dur').innerHTML    = buildDurCell(dur, st);
+    tr.querySelector('.js-type').innerHTML   = buildTypeBadge(type);
+    tr.querySelector('.js-status').innerHTML = buildStatusPill(st);
+    tr.querySelector('.js-errors').innerHTML = buildErrorsCell(errors);
+  });
+}
+
+// ── Tabs ──
+function switchTab(tab) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  document.getElementById('btn-' + tab).classList.add('active');
+}
+
+// ── Toggle tipo de filtro ──
+function setFilterType(type) {
+  filterType = type;
+  document.getElementById('toggle-automation').classList.toggle('active', type === 'automation');
+  document.getElementById('toggle-activity').classList.toggle('active', type === 'activity');
+  applyFilters();
+}
+
+// ── Filtrar linhas + recalcular KPIs ──
+function applyFilters() {
+  const search    = document.getElementById('searchInput').value.toLowerCase().trim();
+  const actFilter = document.getElementById('activityDescriptionFilter').value.toLowerCase();
+  const statusF   = document.getElementById('statusFilter').value.toLowerCase();
+  const rows      = document.querySelectorAll('#tableBody tr');
+
+  let visible = 0, cRed = 0, cAmber = 0, cGreen = 0, cErrors = 0;
+
+  rows.forEach(tr => {
+    const autoName = (tr.dataset.auto   || '').toLowerCase();
+    const actName  = (tr.dataset.act    || '').toLowerCase();
+    const type     = (tr.dataset.type   || '').toLowerCase();
+    const status   = (tr.dataset.status || '').toLowerCase();
+    const errors   = parseInt(tr.dataset.errors, 10) || 0;
+
+    const matchSearch = !search   || (filterType === 'automation' ? autoName.includes(search) : actName.includes(search));
+    const matchType   = !actFilter || type === actFilter;
+    const matchStatus = !statusF  || status === statusF;
+
+    if (matchSearch && matchType && matchStatus) {
+      tr.style.display = '';
+      visible++;
+      cErrors += errors;
+      if (status === 'red')    cRed++;
+      else if (status === 'yellow') cAmber++;
+      else cGreen++;
+    } else {
+      tr.style.display = 'none';
+    }
+  });
+
+  document.getElementById('noResults').style.display = visible === 0 ? '' : 'none';
+  document.getElementById('tableCount').textContent  = `${visible} de ${rows.length} registros`;
+
+  document.getElementById('kpi-red').textContent    = cRed;
+  document.getElementById('kpi-amber').textContent  = cAmber;
+  document.getElementById('kpi-green').textContent  = cGreen;
+  document.getElementById('kpi-errors').textContent = cErrors;
+  document.getElementById('kpi-total').textContent  = visible;
+}
+
+// ── Ordenação ──
+function sortBy(col) {
+  if (sortCol === col) { sortAsc = !sortAsc; } else { sortCol = col; sortAsc = false; }
+
+  ['th-duration','th-errors'].forEach(id =>
+    document.getElementById(id).classList.remove('sorted-asc', 'sorted-desc')
+  );
+  const thId = col === 'duration' ? 'th-duration' : 'th-errors';
+  document.getElementById(thId).classList.add(sortAsc ? 'sorted-asc' : 'sorted-desc');
+
+  const tbody   = document.getElementById('tableBody');
+  const rowsArr = Array.from(tbody.querySelectorAll('tr'));
+
+  rowsArr.sort((a, b) => {
+    const valA = parseFloat(a.dataset[col]) || 0;
+    const valB = parseFloat(b.dataset[col]) || 0;
+    return sortAsc ? valA - valB : valB - valA;
+  });
+
+  rowsArr.forEach(r => tbody.appendChild(r));
+  applyFilters();
+}
+
+// ── Período: persiste os outros filtros na URL antes de fazer reload ──
+function submitPeriodo() {
+  const url    = new URL(window.location.href);
+  const select = document.getElementById('periodoErros');
+  url.searchParams.set('periodoErros', select.value);
+
+  const act    = document.getElementById('activityDescriptionFilter').value;
+  const status = document.getElementById('statusFilter').value;
+  const search = document.getElementById('searchInput').value;
+  const ft     = filterType;
+
+  act    ? url.searchParams.set('activityDescription', act)    : url.searchParams.delete('activityDescription');
+  status ? url.searchParams.set('status', status)              : url.searchParams.delete('status');
+  search ? url.searchParams.set('search', search)              : url.searchParams.delete('search');
+  url.searchParams.set('filterType', ft);
+
+  window.location.href = url.toString();
+}
+
+// ── Limpar filtros ──
+function resetFilters() {
+  document.getElementById('searchInput').value = '';
+  document.getElementById('activityDescriptionFilter').value = '';
+  document.getElementById('statusFilter').value = '';
+  sortCol = null; sortAsc = true;
+  ['th-duration','th-errors'].forEach(id =>
+    document.getElementById(id).classList.remove('sorted-asc','sorted-desc')
+  );
+  applyFilters();
+}
+
+// ── Restaurar filtros da URL após reload por período ──
+function restoreFiltersFromURL() {
+  const params = new URLSearchParams(window.location.search);
+  const act    = params.get('activityDescription');
+  const status = params.get('status');
+  const search = params.get('search');
+  const ft     = params.get('filterType');
+
+  if (act)    document.getElementById('activityDescriptionFilter').value = act;
+  if (status) document.getElementById('statusFilter').value = status;
+  if (search) document.getElementById('searchInput').value  = search;
+  if (ft && ft !== filterType) setFilterType(ft);
+}
+
+// ── Init ──
+window.addEventListener('DOMContentLoaded', function () {
+  decorateRows();           // injeta UI nas células geradas pelo AMPscript
+  restoreFiltersFromURL();  // restaura seleções de filtros após reload de período
+  applyFilters();           // aplica filtros iniciais e calcula KPIs
+});
+
+document.getElementById('searchInput').addEventListener('input', applyFilters);
+document.getElementById('activityDescriptionFilter').addEventListener('change', applyFilters);
+document.getElementById('statusFilter').addEventListener('change', applyFilters);
+</script>
+</body>
+</html>
